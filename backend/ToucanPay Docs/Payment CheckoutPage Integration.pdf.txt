@@ -1,0 +1,154 @@
+
+
+=== PAGE 1 ===
+
+1
+
+=== PAGE 2 ===
+
+2
+Title
+Complete Title Toucan-Payments-Check Out-API Specifications
+Brief Title Check Out-API Specifications
+Approval
+Approver Venkata Ponnapallivenkata.ponnapalli@toucanus.com
+Approval Date
+Date to Initiate Next Version
+Reviewers
+Review
+# Start End Additional ReviewRequired (Yes/No) Reviewers
+1 venkata.ponnapalli@toucanus.com
+2
+Revision History
+Date Author Comments Version
+09/24/2025 Siva Yanabotula
+SriDurga Devi
+1.0
+
+=== PAGE 3 ===
+
+3
+Table Of Contents
+Checkout API...........................................................................................................3
+API Endpoint.........................................................................................................3
+Request Parameters.............................................................................................3
+Headers................................................................................................................4
+Request Body.......................................................................................................4
+Response..............................................................................................................5
+Possible error codes.............................................................................................6
+Hash Amount Logic in Java..................................................................................7
+Checkout API
+API Endpoint
+ Method: POST
+ Endpoint: https://pay.testtoucanpay.in/api/auth/getpaymentsession
+Request Parameters
+t Terminal ID String Y Any
+o Order id String Y min 15 digits
+ta Transaction
+amount
+String Y Any
+c Currency String Y Any
+mac Merchant’s
+designated token
+String Y Any
+murl environment/regi
+on
+String Y Any
+name Senders name String Y Any
+Phone
+number
+senders' mobile
+number
+String Y Any
+Email id senders Gmail String Y Any
+ha Hash amount String Y
+
+=== PAGE 4 ===
+
+4
+Headers
+Content-Type: application/x-www-form-urlencoded
+Request Body
+t:45789944
+0:12022025173230443(invoice number unique for every transaction min 15 digits)
+ta:23
+c:INR
+mac:eyJhbGciOiJSUzI1NiJ9.eyJzdWIiOiJzZWxmc2VydmVAYmVycnlieXRlcyIsImlhdCI6MTc2MD
+A5MTY0MiwiZXhwIjoxOTE3ODAxMDAwfQ.eLf0QEnXegASWurJYBi_T9j7uzxnzqdLFUSK-
+WIktzpmDXa3zeYwGaSqDqaULgjfH7z-
+8wFAJQlhDQ2T6ibf99dap2pjjUKVryemvqzpXhNTj4YtoVDQ0Y97F8SF6OSpWea3cyYh1MqVI_J
+g1Pw161c9n-0GhfDjv6hu_TwL4gXIc6rD-gVkEV_cNI5wN5cP-
+heP3a2ZVdTj7RPNnsOLRIQmke4j1mnom1vdwq1PInGcEj88-
+0GHnLBfhJG0qeW_SwQvjTMqB2Fg5PVprtLnbUT41TCSikaeEHyXuU7sqxQTMeSvGnhvfkg1qyJ
+g4TvxouSql1PByvLCKNiKzWgaKQ
+murl : https://merchant.testtoucanpay.in/
+name:srikanth
+phone:8745696254
+emaiId:asd@gmail.com
+ha:6ff334e1051a09e90127ba4e309e026bb830163a2ce3a355af2ce2310ff6e7e9830d20196a
+3472bfc8632fd3b60cb56102a84fae70ab1a32942055eb40022225
+
+=== PAGE 5 ===
+
+5
+Response
+Field name Description Data
+type
+Mandatory Length
+Location Location to be navigated String
+ Response:
+{
+"Location": "https://pay-
+develop.acq.toucanint.com/#/auth/checkoutpage/NjdlNjgyYWVmNTY1YjMzZGJiNm
+NkM2Jm/ZXlKaGJHY2lPaUpJVXpJMU5pSjkuZXlKemRXSWlPaUpqYUdWamEyOTFkRUJ
+rWldaaGRXeDBJaXdpYVdGMElqb3hOelF6TVRVNU9UZ3lMQ0psZUhBaU9qRTNORE14
+TmpBNE9ESjkuTU81VF8zMzZ1cUJseGlEWS0tbWtnYV83YkVyWHVuLU8zRlBfYnplNjVY
+SQ",
+}
+ Behavior: The app extracts the redirectUrl from the response and navigates it in a
+WebView, displaying the Payment Checkout screen. Subsequent navigation (e.g., to
+UPI or Card payment screens) happens within the WebView, managed by the Angular
+frontend.
+
+=== PAGE 6 ===
+
+6
+Possible error codes
+*(All the validations for transaction amount, email Id, phone number are done in frontend
+itself) *
+Error Code Description
+302 Redirect url
+200 The request was successful but the
+Redirect url was not sent from backend
+404 Given Merchant token is not authorized to
+access the api
+Failure url this url will be sent in the field value
+“Location” which is in the headers
+Field name Field value Status code Displays failure
+url
+Length
+t Empty/wrong
+terminal
+302 Y Any
+o Empty/wrong
+order id
+302 N Any
+ta Empty/0/-0. 2..
+wrong format
+302 N Any
+c empty 200 N Any
+mac empty 404 No url sent Any
+murl Empty/wrong
+URL
+302 N Any
+Hash Amount Logic in Java
+private String computeSHA512(String data) throws Exception {
+MessageDigest digest = MessageDigest.getInstance(SHA_512);
+byte[] hash = digest.digest(data.getBytes(StandardCharsets.UTF_8)); // Use UTF-8
+encoding
+StringBuilder sb = new StringBuilder();
+for (byte b : hash) {
+sb.append(String.format(FORMAT, b));
+}
+return sb.toString();
+}

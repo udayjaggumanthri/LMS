@@ -1,8 +1,86 @@
-node_modules/
-build/
-dist/
-coverage/
+# ==============================================================================
+# Prajnadhara EDU - Fullstack LMS Repository .gitignore
+# ==============================================================================
+
+# OS & Editor
 .DS_Store
+Thumbs.db
+desktop.ini
+*.swp
+*.swo
+*~
+.idea/
+.vscode/
+*.sublime-project
+*.sublime-workspace
+
+# Python & Django
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual Environments
+venv/
+.venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+
+# Django Databases & Media
+*.sqlite3
+db.sqlite3
+/backend/db.sqlite3
+/backend/media/
+/backend/staticfiles/
+
+# Node & Frontend
+node_modules/
+/frontend/node_modules/
+/frontend/dist/
+/frontend/.vite/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Environment Secrets
+.env
+.env.local
+.env.*.local
+/backend/.env
+/frontend/.env
+
+# Playwright & Testing
+test-results/
+playwright-report/
+blob-report/
+playwright/.cache/
+/backend/test_screenshots/
+/backend/scratch_*.py
+/backend/test_*.py
+/backend/test_*.html
+
+# System Generated Logs
 *.log
-.env*
-!.env.example
+.system_generated/

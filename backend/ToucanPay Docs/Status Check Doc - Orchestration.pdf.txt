@@ -1,0 +1,239 @@
+
+
+=== PAGE 1 ===
+
+© Toucan Payments 1 | P a g e  
+` 
+ 
+
+
+=== PAGE 2 ===
+
+© Toucan Payments 2 | P a g e  
+Table of Contents 
+ 
+ 
+Check Status API: ..................................................................................................... 
+Request Body................................................................................. 3 
+Request parameters ........................................................................ 4 
+Response Body ............................................................................... 4 
+Callback Request: ........................................................................... 5 
+Request parameters ........................................................................ 6 
+Response ..................................................................................... 7 
+
+=== PAGE 3 ===
+
+© Toucan Payments 3 | P a g e  
+Check Status API: 
+ 
+ Endpoint: https://pay.toucanpay.in/api/pay/v1/checkStatus 
+ Method: POST 
+ Headers: 
+ 
+Authorization Bearer 
+eyJhbGciOiJSUzI1NiJ9.eyJzdWIiOiJzZWxmc2VydmVAeGJ6MmoxeHdiYSIsImlhdCI6MTc2MTI5ODI5OSwiZXhwIjo 
+xNzY xMzA1NDk5fQ.Ph8FniaTFvUT0YwkhmBjHRaerPPc4itZyJLpSfsLNHXHLlsmfeH4-YS0tj3sd-
+MZYa6pmzUxceTp74nMpwq_0P0HGFy8HO-
+P293wpGhVv4Avjo7sAoD3NXHGYv_46PycZDJRSCYPNxT39peg1hF0nFVGAz3r9zk6k6Ijn9MrCdlJCQkkg4OjMvPI 
+z4eb HBJeatsCA8cLWe0_F8jttxKWMQHcKysKx-
+cpqHb16RlhFVIBU52DwxaMG52uOmFPq01F9gVX2SRtMaFRuvZguIwr0WDJanChRqDEEdp1eyUPd8JpzHaf8FcG 
+xxY mPpanD-E3RPKf_RyTayVAWojBHE3m0w 
+Request Body: 
+ 
+{ 
+    "messageID": "/api/pay/v1/checkStatus", 
+    "requestType": "text", 
+    "object": { 
+        "invoiceNumber": "176129831762956", 
+        "terminalNumber": "1290364L ", 
+        "merchantNumber": "12345678910" 
+    } 
+} 
+ 
+ 
+Request parameters: 
+ 
+Field name Description Data type Mandatory Length Default/Sample 
+messageID Api end point String Y Any /api/con/v2/pay 
+requestTy 
+pe 
+Request Tye String Y Any text 
+orderNo Same as invoice 
+number in req 
+String Y Min 15 176129831762 
+956 
+terminalNu 
+mber 
+TerminalNumber 
+same as in req 
+String Y Any 1290364L 
+
+=== PAGE 4 ===
+
+© Toucan Payments 4 | P a g e  
+Response Body: 
+{ 
+"success": true, 
+"object": { 
+"invoiceNumber": "404500122005", 
+"actionCode": "00", 
+"approvalCode": "076298", 
+"rrn": "529512865850", 
+"saleDateTime": "2025-10-22T12:45:13", 
+"terminalNumber": "1290364L", 
+"transactionAmount": { 
+"value": 58, 
+"code": "INR" 
+}, 
+"merchantName": "Fire Strome", 
+"merchantNumber": "129036462325760", 
+"custVpa": "422998****0012", 
+"txnType": "PURCHASE", 
+"orderNo": "176129831762956" 
+} 
+} 
+
+=== PAGE 5 ===
+
+© Toucan Payments 5 | P a g e  
+Note: 
+Order No field as invoice number in transaction request 
+Response parameters: 
+ 
+Field name Description Data type Mandatory Length Default/Sample 
+success Api status Boolean Y Any true 
+code Currency code Currency Y Any INR 
+value Transaction 
+Amount 
+Bigdecima 
+l 
+Y Any 58 
+invoiceNu 
+mber 
+Unique number for 
+every transaction 
+String Y Minimum 
+15 digits 
+1761298317629 
+56 
+merchant 
+Number 
+Same as txn req String Y Any 1290364623257 
+60 
+terminalNu 
+mber 
+Same as txn req String Y Any 1290364L 
+rrn Unique for every 
+transaction 
+String Y Min 15 
+length 
+1761298317629 
+56 
+saleDateTi 
+me 
+Transaction time LocalDat 
+eTime 
+Y Any 2025-10- 
+22T12:45:13 
+merchantN 
+ame 
+merchantName String Y Any KARVY 
+custVpa Masked customer 
+vpa 
+String Y Any *****8179@yb 
+l 
+actionCode Responsecode(00- 
+success) 
+String Y Any 00 
+approvalCo 
+de 
+Approval code String Y Any 076298 
+txnType txnType String Y Any PURCHASE 
+orderNo Same as invoice 
+number in txn req 
+String Y Any 176129831762 
+956 
+
+=== PAGE 6 ===
+
+© Toucan Payments 6 | P a g e  
+Callback Request: 
+ 
+ Method: POST 
+{ 
+"upiTransRefNo": "1441503", 
+"pspRefNo": "EM4B5C3E85BB6E45B191F088D3407E0B2A", 
+ 
+"txnId": "YEScb441a2b36f94edf9de6a375b6b1ba4d", 
+"custRefNo": "404500122005", 
+"amount": "10.00", 
+"txnAuthDate": "Feb 14, 2024, 6:25:39 PM", 
+"payeeRespCode": "00", 
+"approvalNumber": "145251", 
+"status": "SUCCESS", 
+"statusDesc": "Transaction success", 
+"payerVPA": "prashant2@yesu", 
+"payeeVPA": "mypaym@yesipay", 
+"txnType": "COLLECT", 
+"txnNote": "Collect", 
+"payeeName": "mypaym", 
+"payerAccNo": " ", 
+"payeeAccNo": " " 
+} 
+Request parameters: 
+ 
+Field name Description Data type Mandatory Length Default/Sample 
+upiTransRe 
+fNo 
+upiTransRefNo String Y Any 1441503 
+pspRefNo Combination 
+terminalNumber+i 
+nvoiceNumber 
+String  Y 1290364L17612 
+9831762956 
+txnId txnId String Y Any YEScb441a2b3 
+
+=== PAGE 7 ===
+
+© Toucan Payments 7 | P a g e  
+     6f94edf9de6a37 
+5b6b1ba4d 
+custRefNo custRefNo String Y Any 404500122005 
+amount Transaction 
+Amount 
+   58.00 
+txnAuthDat 
+e 
+txnAuthDate    Feb 14, 2024, 
+6:25:39 PM 
+payeeResp 
+Code 
+Response code(00-
+success) 
+   00 
+approvalNu 
+mber 
+approvalNumber    145251 
+status status    SUCCESS 
+statusDesc statusDesc    Transaction 
+success 
+payerVPA Custome vpa    prashant2@yes 
+u 
+payeeVPA Merchant vpa    mypaym@yesip 
+ay 
+txnType txnType    PAY 
+txnNote txnNote    food 
+payeeName payeeName    mypaym 
+payerAccN 
+o 
+Customer AccNo     
+payeeAccN 
+o 
+Merchant AccNo     
+ 
+ 
+Response: 
+“suceess”: true 
+Note: 
+1. PspRefNo is combination of terminal number + invoice number (same as transaction request 
+1290364L176129831762956) 
