@@ -1,4 +1,5 @@
 from django.test import TestCase, Client
+from unittest.mock import patch, MagicMock
 from django.contrib.auth import get_user_model
 from apps.courses.models import Course, Category
 from apps.orders.models import Order, OrderItem, PaymentTransaction
@@ -48,7 +49,15 @@ class ToucanPayIntegrationTests(TestCase):
         self.assertEqual(settings.tid, "78183008")
         self.assertTrue(settings.is_enabled)
 
-    def test_initiate_payment_flow(self):
+    @patch('apps.orders.toucanpay_service.urllib.request.build_opener')
+    def test_initiate_payment_flow(self, mock_build_opener):
+        mock_opener = MagicMock()
+        mock_resp = MagicMock()
+        mock_resp.status = 302
+        mock_resp.headers = {'Location': 'https://payuat.toucanpay.com/payment?ref=UAT_MOCK_123'}
+        mock_opener.open.return_value = mock_resp
+        mock_build_opener.return_value = mock_opener
+
         response = self.client.post('/api/payments/toucan/initiate/', {
             'course_ids': [self.course.id],
             'phone': '9876543210'
@@ -69,7 +78,15 @@ class ToucanPayIntegrationTests(TestCase):
         self.assertEqual(tx.order, order)
         self.assertEqual(tx.status, 'pending')
 
-    def test_verify_payment_and_enrollment(self):
+    @patch('apps.orders.toucanpay_service.urllib.request.build_opener')
+    def test_verify_payment_and_enrollment(self, mock_build_opener):
+        mock_opener = MagicMock()
+        mock_resp = MagicMock()
+        mock_resp.status = 302
+        mock_resp.headers = {'Location': 'https://payuat.toucanpay.com/payment?ref=UAT_MOCK_123'}
+        mock_opener.open.return_value = mock_resp
+        mock_build_opener.return_value = mock_opener
+
         # Initiate first
         init_res = self.client.post('/api/payments/toucan/initiate/', {
             'course_ids': [self.course.id]
@@ -95,7 +112,15 @@ class ToucanPayIntegrationTests(TestCase):
         # Check enrollment created
         self.assertTrue(Enrollment.objects.filter(user=self.user, course=self.course, is_active=True).exists())
 
-    def test_webhook_callback(self):
+    @patch('apps.orders.toucanpay_service.urllib.request.build_opener')
+    def test_webhook_callback(self, mock_build_opener):
+        mock_opener = MagicMock()
+        mock_resp = MagicMock()
+        mock_resp.status = 302
+        mock_resp.headers = {'Location': 'https://payuat.toucanpay.com/payment?ref=UAT_MOCK_123'}
+        mock_opener.open.return_value = mock_resp
+        mock_build_opener.return_value = mock_opener
+
         init_res = self.client.post('/api/payments/toucan/initiate/', {
             'course_ids': [self.course.id]
         }, content_type='application/json')
@@ -117,3 +142,4 @@ class ToucanPayIntegrationTests(TestCase):
         order = Order.objects.get(id=order_id)
         self.assertEqual(order.status, 'completed')
         self.assertTrue(Enrollment.objects.filter(user=self.user, course=self.course).exists())
+
