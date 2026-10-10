@@ -20,6 +20,7 @@ import { useNotifications } from '../../context/NotificationContext';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { MediaUploader } from '../../components/common/MediaUploader';
+import { RichTextEditor } from '../../components/common/RichTextEditor';
 
 export const AdminVisualPageEditorPage: React.FC = () => {
   const { showToast } = useNotifications();
@@ -346,18 +347,14 @@ export const AdminVisualPageEditorPage: React.FC = () => {
                     />
                   </div>
 
-                  <div>
-                    <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-1.5">
-                      Body Copy / Long-Form Content (Narrative, policies, contact info, or markdown text)
-                    </label>
-                    <textarea
-                      rows={6}
-                      value={editFormData.content || ''}
-                      onChange={(e) => setEditFormData({ ...editFormData, content: e.target.value })}
-                      className="w-full bg-slate-50 border border-slate-300 rounded p-2.5 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-700 focus:bg-white leading-relaxed font-mono"
-                      placeholder="Full narrative text, policy clauses, guidelines, or structured paragraphs..."
-                    />
-                  </div>
+                  <RichTextEditor
+                    label="Section Body / Long-Form Rich Content"
+                    value={editFormData.content || ''}
+                    onChange={(html) => setEditFormData({ ...editFormData, content: html })}
+                    placeholder="Compose formatted narrative text, headings, policies, lists, or code snippets..."
+                    minHeight="180px"
+                    helperText="Visual WYSIWYG editor powered by TipTap. Format headings, lists, code, and links without typing raw markup."
+                  />
 
                   <MediaUploader
                     label="Section Media Asset / Banner Image"
@@ -412,9 +409,10 @@ export const AdminVisualPageEditorPage: React.FC = () => {
                     <h2 className="text-lg font-bold font-display leading-tight">{editFormData.title || 'Untitled Section'}</h2>
                     <p className="text-xs text-slate-300 leading-relaxed max-w-xl">{editFormData.subtitle}</p>
                     {editFormData.content && (
-                      <p className="text-xs text-slate-400 leading-relaxed max-w-xl line-clamp-3 italic">
-                        {editFormData.content}
-                      </p>
+                      <div
+                        className="text-xs text-slate-300 leading-relaxed max-w-xl line-clamp-4 rich-content bg-slate-800/60 p-3 rounded-lg border border-slate-700/50"
+                        dangerouslySetInnerHTML={{ __html: editFormData.content }}
+                      />
                     )}
                     <div className="flex gap-2 pt-2">
                       {editFormData.primaryBtnText && (

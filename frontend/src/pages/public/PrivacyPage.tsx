@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Breadcrumbs } from '../../components/ui/Breadcrumbs';
 import { cmsService } from '../../api/cmsService';
+import { RichContentViewer } from '../../components/common/RichContentViewer';
 
 export const PrivacyPage: React.FC = () => {
   const [privacyCMS, setPrivacyCMS] = useState({
@@ -48,8 +49,8 @@ export const PrivacyPage: React.FC = () => {
       </div>
 
       {privacyCMS.content && (
-        <div className="mb-8 p-6 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-sm leading-relaxed whitespace-pre-line">
-          {privacyCMS.content}
+        <div className="mb-8 p-6 bg-slate-50 border border-slate-200 rounded-xl">
+          <RichContentViewer content={privacyCMS.content} />
         </div>
       )}
 

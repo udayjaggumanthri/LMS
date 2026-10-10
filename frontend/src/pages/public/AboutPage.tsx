@@ -4,6 +4,7 @@ import { Breadcrumbs } from '../../components/ui/Breadcrumbs';
 import { Button } from '../../components/ui/Button';
 import { CheckCircle2, Star } from 'lucide-react';
 import { cmsService } from '../../api/cmsService';
+import { RichContentViewer } from '../../components/common/RichContentViewer';
 
 export const AboutPage: React.FC = () => {
   const [heroCMS, setHeroCMS] = useState({
@@ -73,7 +74,7 @@ export const AboutPage: React.FC = () => {
 
           <div className="mt-6 space-y-4 text-base sm:text-lg text-slate-600 leading-relaxed max-w-3xl">
             <p>{heroCMS.subtitle}</p>
-            {heroCMS.content && <p>{heroCMS.content}</p>}
+            {heroCMS.content && <RichContentViewer content={heroCMS.content} className="text-base sm:text-lg text-slate-600" />}
           </div>
 
           <div className="mt-8 flex flex-wrap items-center gap-3">

@@ -18,6 +18,7 @@ import { blogService, BlogPostItem } from '../../api/blogService';
 import { Breadcrumbs } from '../../components/ui/Breadcrumbs';
 import { Button } from '../../components/ui/Button';
 import { useNotifications } from '../../context/NotificationContext';
+import { RichContentViewer } from '../../components/common/RichContentViewer';
 
 export const BlogDetailPage: React.FC = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -179,69 +180,7 @@ export const BlogDetailPage: React.FC = () => {
 
       {/* 4. Article Body Content */}
       <main className="max-w-3xl mx-auto px-4 sm:px-6 py-6 text-left">
-        <div className="prose prose-slate max-w-none text-slate-800 text-sm sm:text-base leading-relaxed space-y-6">
-          {post.content.split('\n\n').map((paragraph, idx) => {
-            const text = paragraph.trim();
-            if (!text) return null;
-
-            // Heading 2
-            if (text.startsWith('## ')) {
-              return (
-                <h2 key={idx} className="text-2xl font-bold font-display text-slate-950 pt-4 pb-1 border-b border-slate-100">
-                  {text.replace('## ', '')}
-                </h2>
-              );
-            }
-
-            // Heading 3
-            if (text.startsWith('### ')) {
-              return (
-                <h3 key={idx} className="text-lg font-bold font-display text-slate-900 pt-3">
-                  {text.replace('### ', '')}
-                </h3>
-              );
-            }
-
-            // Blockquote
-            if (text.startsWith('> ')) {
-              return (
-                <blockquote key={idx} className="p-4 bg-emerald-50/70 border-l-4 border-emerald-700 rounded-r-lg text-emerald-950 italic text-sm my-4">
-                  {text.replace('> ', '')}
-                </blockquote>
-              );
-            }
-
-            // Bullet list items
-            if (text.includes('\n- ') || text.startsWith('- ')) {
-              const items = text.split('\n').filter(l => l.trim().startsWith('- '));
-              return (
-                <ul key={idx} className="space-y-2 list-disc list-inside pl-2 text-slate-700 my-4">
-                  {items.map((it, i) => (
-                    <li key={i} className="leading-relaxed">
-                      {it.replace(/^- /, '')}
-                    </li>
-                  ))}
-                </ul>
-              );
-            }
-
-            // Code block
-            if (text.startsWith('```')) {
-              const codeLines = text.replace(/```[a-z]*/g, '').trim();
-              return (
-                <pre key={idx} className="p-4 bg-slate-900 text-slate-100 rounded-xl text-xs font-mono overflow-x-auto leading-relaxed border border-slate-800">
-                  <code>{codeLines}</code>
-                </pre>
-              );
-            }
-
-            return (
-              <p key={idx} className="text-slate-700 leading-relaxed">
-                {text}
-              </p>
-            );
-          })}
-        </div>
+        <RichContentViewer content={post.content} className="space-y-6" />
 
         {/* 5. Author Biography Card */}
         <div className="mt-12 p-6 bg-slate-50 border border-slate-200 rounded-2xl flex flex-col sm:flex-row items-center sm:items-start gap-5">

@@ -4,6 +4,7 @@ import { Breadcrumbs } from '../../components/ui/Breadcrumbs';
 import { ShieldCheck, Clock, CheckCircle2, AlertCircle, Mail } from 'lucide-react';
 import { cmsService } from '../../api/cmsService';
 import { Button } from '../../components/ui/Button';
+import { RichContentViewer } from '../../components/common/RichContentViewer';
 
 export const RefundPolicyPage: React.FC = () => {
   const [refundCMS, setRefundCMS] = useState({
@@ -51,8 +52,8 @@ export const RefundPolicyPage: React.FC = () => {
       </div>
 
       {refundCMS.content && (
-        <div className="mb-8 p-6 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-sm leading-relaxed whitespace-pre-line">
-          {refundCMS.content}
+        <div className="mb-8 p-6 bg-slate-50 border border-slate-200 rounded-xl">
+          <RichContentViewer content={refundCMS.content} />
         </div>
       )}
 

@@ -20,6 +20,7 @@ import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { Badge } from '../../components/ui/Badge';
 import { MediaUploader } from '../../components/common/MediaUploader';
+import { RichTextEditor } from '../../components/common/RichTextEditor';
 
 export const AdminBlogManagementPage: React.FC = () => {
   const { showToast } = useNotifications();
@@ -440,19 +441,15 @@ export const AdminBlogManagementPage: React.FC = () => {
                 />
               </div>
 
-              <div>
-                <label className="block font-semibold uppercase tracking-wider text-slate-700 mb-1">
-                  Full Article Body (Markdown supported: ## Headings, - lists, `code`, &gt; quotes)
-                </label>
-                <textarea
-                  rows={8}
-                  value={formData.content || ''}
-                  onChange={(e) => setFormData({ ...formData, content: e.target.value })}
-                  placeholder="Write the full in-depth article body here..."
-                  className="w-full bg-slate-50 border border-slate-300 rounded p-2.5 text-xs font-mono text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-700 leading-relaxed"
-                  required
-                />
-              </div>
+              <RichTextEditor
+                label="Full Article Body"
+                value={formData.content || ''}
+                onChange={(html) => setFormData({ ...formData, content: html })}
+                placeholder="Write the full in-depth article body here. Format headings, lists, code blocks, blockquotes, and embeds without typing markdown tags..."
+                minHeight="280px"
+                helperText="Visual WYSIWYG editor powered by TipTap. Format headings, bold/italics, quotes, code snippets, lists, and links."
+                required
+              />
 
               <div className="flex items-center gap-6 pt-2">
                 <label className="flex items-center gap-2 cursor-pointer font-semibold text-slate-800">

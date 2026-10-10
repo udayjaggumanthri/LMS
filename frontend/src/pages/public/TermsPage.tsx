@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Breadcrumbs } from '../../components/ui/Breadcrumbs';
 import { cmsService } from '../../api/cmsService';
+import { RichContentViewer } from '../../components/common/RichContentViewer';
 
 export const TermsPage: React.FC = () => {
   const [termsCMS, setTermsCMS] = useState({
@@ -48,8 +49,8 @@ export const TermsPage: React.FC = () => {
       </div>
 
       {termsCMS.content && (
-        <div className="mb-8 p-6 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-sm leading-relaxed whitespace-pre-line">
-          {termsCMS.content}
+        <div className="mb-8 p-6 bg-slate-50 border border-slate-200 rounded-xl">
+          <RichContentViewer content={termsCMS.content} />
         </div>
       )}
 
