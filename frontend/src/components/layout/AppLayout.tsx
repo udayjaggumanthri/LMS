@@ -46,6 +46,17 @@ export const AppLayout: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
 
+  React.useEffect(() => {
+    if (mobileMenuOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [mobileMenuOpen]);
+
   const handleLogout = () => {
     logout();
     navigate('/signin', { replace: true });
@@ -166,45 +177,33 @@ export const AppLayout: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col md:flex-row text-slate-900 overflow-x-hidden">
-      {/* Mobile Top Header */}
-      <div className="md:hidden bg-white border-b border-slate-200 px-4 py-3 flex items-center justify-between z-40">
-        <Logo size="sm" />
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => setMobileMenuOpen(prev => !prev)}
-            className="p-1.5 rounded border border-slate-200 text-slate-700 min-h-[40px] min-w-[40px] flex items-center justify-center"
-            aria-label="Toggle menu"
-          >
-            {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-          </button>
-        </div>
-      </div>
-
       {/* Mobile Backdrop */}
       {mobileMenuOpen && (
         <div
-          className="md:hidden fixed inset-0 z-40 bg-slate-950/50"
+          className="md:hidden fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-xs transition-opacity duration-300"
           onClick={() => setMobileMenuOpen(false)}
+          aria-hidden="true"
         />
       )}
 
       {/* Left Sidebar */}
       <aside
-        className={`${
-          mobileMenuOpen ? 'fixed inset-y-0 left-0 z-50 w-72 shadow-2xl' : 'hidden'
-        } md:static md:flex md:w-64 bg-white border-r border-slate-200 flex-col shrink-0 min-h-screen z-30`}
+        className={`fixed inset-y-0 left-0 z-50 w-72 h-screen max-h-screen bg-white shadow-2xl flex flex-col md:static md:z-auto md:w-64 md:h-screen md:sticky md:top-0 md:shadow-none border-r border-slate-200 shrink-0 transition-transform duration-300 ease-out ${
+          mobileMenuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
+        }`}
+        style={{ backgroundColor: '#ffffff' }}
+        aria-label="Navigation Sidebar"
       >
         {/* Sidebar Brand Header */}
-        <div className="p-4 border-b border-slate-200 flex items-center justify-between bg-white">
+        <div className="p-4 border-b border-slate-200 flex items-center justify-between bg-white shrink-0">
           <Logo size="sm" />
           <button
             type="button"
             onClick={() => setMobileMenuOpen(false)}
-            className="md:hidden p-1.5 text-slate-400 hover:text-slate-800 rounded"
+            className="md:hidden p-1.5 text-slate-500 hover:text-slate-900 rounded-lg transition-colors"
             aria-label="Close sidebar"
           >
-            <X className="w-4 h-4" />
+            <X className="w-5 h-5" />
           </button>
         </div>
 
@@ -297,18 +296,36 @@ export const AppLayout: React.FC = () => {
       {/* Main App Content Area */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* Top App Bar */}
-        <header className="h-16 bg-white border-b border-slate-200 px-4 sm:px-6 flex items-center justify-between shrink-0">
-          <div className="flex items-center gap-2 text-xs text-slate-500 overflow-hidden min-w-0">
-            <span className="font-semibold text-slate-900 shrink-0">{roleTitles[currentRole]}</span>
-            <ChevronRight className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-            <span className="text-slate-600 truncate">{location.pathname}</span>
+        <header className="h-16 bg-white border-b border-slate-200 px-4 sm:px-6 flex items-center justify-between shrink-0 sticky top-0 z-30">
+          <div className="flex items-center gap-3 min-w-0">
+            {/* Mobile Hamburger Button */}
+            <button
+              type="button"
+              onClick={() => setMobileMenuOpen(true)}
+              className="md:hidden p-2 rounded-lg text-slate-700 hover:text-slate-950 hover:bg-slate-100 border border-slate-200 transition-colors min-h-[40px] min-w-[40px] flex items-center justify-center shrink-0"
+              aria-label="Open navigation menu"
+            >
+              <Menu className="w-5 h-5" />
+            </button>
+
+            {/* Mobile Brand / Workspace Badge */}
+            <div className="md:hidden flex items-center gap-2">
+              <Logo size="sm" />
+            </div>
+
+            {/* Desktop Breadcrumbs */}
+            <div className="hidden md:flex items-center gap-2 text-xs text-slate-500 overflow-hidden min-w-0">
+              <span className="font-semibold text-slate-900 shrink-0">{roleTitles[currentRole]}</span>
+              <ChevronRight className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+              <span className="text-slate-600 truncate">{location.pathname}</span>
+            </div>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
             {/* Single Clean Storefront Link */}
             <Link
               to="/"
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-700 hover:text-emerald-950 hover:bg-slate-100 border border-slate-200 transition-colors shadow-2xs"
+              className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-700 hover:text-emerald-950 hover:bg-slate-100 border border-slate-200 transition-colors shadow-2xs"
               title="Visit Public Storefront"
             >
               <Compass className="w-3.5 h-3.5 text-emerald-700" />

@@ -178,92 +178,88 @@ export const HomePage: React.FC = () => {
   return (
     <div className="w-full text-slate-900 bg-white">
       {/* ---------------- 1. HERO SECTION ---------------- */}
-      <section className="border-b border-slate-200 bg-white pt-10 pb-16 lg:pt-16 lg:pb-24">
+      <section className="border-b border-slate-200 bg-white pt-8 pb-12 sm:pt-12 sm:pb-16 lg:pt-16 lg:pb-24">
         <div className="max-w-7xl mx-auto px-4 sm:px-6">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-12 items-center">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
             {/* Left Column: Headline, Copy, Search, CTAs */}
             <div className="lg:col-span-7 text-left">
-              <div className="inline-flex items-center gap-2 px-3 py-1 bg-slate-100 border border-slate-200 rounded text-xs font-semibold text-slate-800 mb-6">
-                <span className="text-emerald-800 font-bold uppercase tracking-wider">PrajnadharaEdu</span>
+              <div className="inline-flex items-center gap-2 px-3 py-1 bg-emerald-50/80 border border-emerald-200/80 rounded-full text-[11px] sm:text-xs font-semibold text-emerald-950 mb-4 sm:mb-6 max-w-full">
+                <span className="text-emerald-800 font-bold uppercase tracking-wider shrink-0">PrajnadharaEdu</span>
                 <span aria-hidden="true" className="text-slate-400">·</span>
-                <span>{heroCMS.badge}</span>
+                <span className="truncate">{heroCMS.badge}</span>
               </div>
 
-              <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold font-display tracking-tight text-slate-950 leading-[1.12]">
+              <h1 className="text-2xl sm:text-4xl lg:text-5xl font-bold font-display tracking-tight text-slate-950 leading-tight sm:leading-[1.15]">
                 {heroCMS.title}
               </h1>
 
-              <p className="mt-4 text-base sm:text-lg text-slate-600 max-w-2xl leading-relaxed">
+              <p className="mt-3 sm:mt-4 text-sm sm:text-base lg:text-lg text-slate-600 max-w-2xl leading-relaxed">
                 {heroCMS.subtitle}
               </p>
 
-              {/* CTAs */}
-              <div className="mt-7 flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-                <Link to={heroCMS.primaryBtnLink} className="w-full sm:w-auto">
-                  <Button variant="primary" size="lg" className="w-full sm:w-auto bg-emerald-800 hover:bg-emerald-900 border-emerald-800 text-white font-semibold justify-center">
+              {/* Responsive CTAs */}
+              <div className="mt-5 sm:mt-7 flex items-center gap-3 w-full sm:w-auto">
+                <Link to={heroCMS.primaryBtnLink} className="flex-1 sm:flex-initial">
+                  <Button variant="primary" size="md" className="w-full sm:w-auto bg-emerald-800 hover:bg-emerald-900 border-emerald-800 text-white font-semibold justify-center shadow-xs">
                     {heroCMS.primaryBtnText}
                   </Button>
                 </Link>
-                <Link to={heroCMS.secondaryBtnLink} className="w-full sm:w-auto">
-                  <Button variant="outline" size="lg" className="w-full sm:w-auto border-slate-300 text-slate-800 hover:bg-slate-50 font-semibold justify-center">
+                <Link to={heroCMS.secondaryBtnLink} className="flex-1 sm:flex-initial">
+                  <Button variant="outline" size="md" className="w-full sm:w-auto border-slate-300 text-slate-800 hover:bg-slate-50 font-semibold justify-center">
                     {heroCMS.secondaryBtnText}
                   </Button>
                 </Link>
               </div>
 
-              {/* Course Search Box */}
-              <form onSubmit={handleHeroSearch} className="mt-8 max-w-xl">
-                <div className="flex flex-col sm:flex-row items-stretch gap-2 bg-white p-1.5 border border-slate-300 rounded focus-within:border-emerald-800 focus-within:ring-2 focus-within:ring-emerald-800/20">
-                  <div className="relative flex-1 flex items-center">
-                    <Search className="w-4 h-4 text-slate-400 absolute left-3 pointer-events-none" />
+              {/* Responsive Course Search Box */}
+              <form onSubmit={handleHeroSearch} className="mt-6 sm:mt-8 max-w-xl">
+                <div className="flex items-center gap-2 bg-white p-1 sm:p-1.5 border border-slate-300 rounded-lg focus-within:border-emerald-800 focus-within:ring-2 focus-within:ring-emerald-800/20 shadow-xs">
+                  <div className="relative flex-1 flex items-center min-w-0">
+                    <Search className="w-4 h-4 text-slate-400 absolute left-3 shrink-0 pointer-events-none" />
                     <input
                       type="text"
                       value={heroSearch}
                       onChange={(e) => setHeroSearch(e.target.value)}
-                      placeholder="Search courses (e.g. AI, Data Science, Python, DevOps)..."
-                      className="w-full pl-9 pr-3 py-2 text-sm text-slate-900 bg-transparent placeholder-slate-400 focus:outline-none"
+                      placeholder="Search courses (AI, Data, Web, Cloud)..."
+                      className="w-full pl-9 pr-2 py-2 text-xs sm:text-sm text-slate-900 bg-transparent placeholder-slate-400 focus:outline-none"
                     />
                   </div>
-                  <Button type="submit" variant="primary" size="md" className="bg-emerald-800 hover:bg-emerald-900">
+                  <Button type="submit" variant="primary" size="sm" className="bg-emerald-800 hover:bg-emerald-900 shrink-0 font-semibold px-4">
                     Search
                   </Button>
                 </div>
 
                 {/* Popular searches tags */}
-                <div className="mt-2.5 flex items-center gap-2 text-xs text-slate-500 flex-wrap">
-                  <span className="font-semibold text-slate-700">Popular:</span>
-                  <Link to="/category/ai" className="hover:text-emerald-800 underline-offset-2 hover:underline">AI</Link>
-                  <span aria-hidden="true">·</span>
-                  <Link to="/category/artificial-intelligence" className="hover:text-emerald-800 underline-offset-2 hover:underline">Artificial Intelligence</Link>
-                  <span aria-hidden="true">·</span>
-                  <Link to="/category/data-science" className="hover:text-emerald-800 underline-offset-2 hover:underline">Data Science</Link>
-                  <span aria-hidden="true">·</span>
-                  <Link to="/category/devops" className="hover:text-emerald-800 underline-offset-2 hover:underline">DevOps</Link>
-                  <span aria-hidden="true">·</span>
-                  <Link to="/category/cybersecurity" className="hover:text-emerald-800 underline-offset-2 hover:underline">Cybersecurity</Link>
+                <div className="mt-2.5 flex items-center gap-1.5 text-[11px] sm:text-xs text-slate-500 overflow-x-auto no-scrollbar py-0.5">
+                  <span className="font-semibold text-slate-700 shrink-0">Popular:</span>
+                  <Link to="/category/ai" className="shrink-0 px-2 py-0.5 rounded-full bg-slate-100 hover:bg-emerald-50 hover:text-emerald-800 transition-colors">AI</Link>
+                  <Link to="/category/artificial-intelligence" className="shrink-0 px-2 py-0.5 rounded-full bg-slate-100 hover:bg-emerald-50 hover:text-emerald-800 transition-colors">Artificial Intelligence</Link>
+                  <Link to="/category/data-science" className="shrink-0 px-2 py-0.5 rounded-full bg-slate-100 hover:bg-emerald-50 hover:text-emerald-800 transition-colors">Data Science</Link>
+                  <Link to="/category/devops" className="shrink-0 px-2 py-0.5 rounded-full bg-slate-100 hover:bg-emerald-50 hover:text-emerald-800 transition-colors">DevOps</Link>
+                  <Link to="/category/cybersecurity" className="shrink-0 px-2 py-0.5 rounded-full bg-slate-100 hover:bg-emerald-50 hover:text-emerald-800 transition-colors">Cybersecurity</Link>
                 </div>
               </form>
             </div>
 
             {/* Right Column: Authentic Photography */}
             <div className="lg:col-span-5">
-              <div className="border border-slate-200 rounded overflow-hidden bg-slate-50 shadow-sm">
+              <div className="border border-slate-200 rounded-xl overflow-hidden bg-slate-50 shadow-sm">
                 <div className="relative">
                   <img
                     src={heroCMS.mediaUrl || HERO_IMAGE}
                     alt="PrajnadharaEdu student engaged in practical coding project"
-                    className="w-full aspect-[4/3] object-cover"
+                    className="w-full aspect-[16/10] sm:aspect-[4/3] object-cover"
                     loading="eager"
                   />
-                  <div className="p-4 bg-white border-t border-slate-200 text-left">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <div className="text-xs font-bold text-slate-900">Practical Tech Masterclasses</div>
-                        <div className="text-[11px] text-slate-500 mt-0.5">33 Courses across AI, Cloud & Data</div>
+                  <div className="p-3.5 sm:p-4 bg-white border-t border-slate-200 text-left">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="min-w-0">
+                        <div className="text-xs font-bold text-slate-900 truncate">Practical Tech Masterclasses</div>
+                        <div className="text-[11px] text-slate-500 mt-0.5 truncate">33 Courses across AI, Cloud & Data</div>
                       </div>
-                      <Link to="/courses">
+                      <Link to="/courses" className="shrink-0">
                         <Button variant="outline" size="sm">
-                          Browse Catalog
+                          Browse
                         </Button>
                       </Link>
                     </div>

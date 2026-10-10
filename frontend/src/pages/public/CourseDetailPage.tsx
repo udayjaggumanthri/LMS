@@ -246,25 +246,25 @@ export const CourseDetailPage: React.FC = () => {
               </p>
 
               {/* Metadata strip */}
-              <div className="mt-5 flex items-center gap-4 flex-wrap text-xs text-slate-300">
+              <div className="mt-5 flex items-center gap-x-4 gap-y-2 flex-wrap text-xs text-slate-300">
                 <Rating rating={course.rating || 0} reviewsCount={course.reviewsCount || 0} size="sm" />
-                <span aria-hidden="true" className="text-slate-600">·</span>
+                <span aria-hidden="true" className="text-slate-600 hidden sm:inline">·</span>
                 <span className="tabular-nums">{(course.studentCount || (course as any).studentsCount || 0).toLocaleString('en-IN')} students enrolled</span>
-                <span aria-hidden="true" className="text-slate-600">·</span>
+                <span aria-hidden="true" className="text-slate-600 hidden sm:inline">·</span>
                 <span>Created by <Link to={`/instructor/${course.instructorId}`} className="text-emerald-400 hover:underline font-semibold">{instructorName}</Link></span>
               </div>
 
-              <div className="mt-3 flex items-center gap-4 text-xs text-slate-400">
-                <span className="inline-flex items-center gap-1.5">
-                  <Calendar className="w-3.5 h-3.5" />
+              <div className="mt-3 flex items-center gap-x-4 gap-y-2 flex-wrap text-xs text-slate-400">
+                <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
+                  <Calendar className="w-3.5 h-3.5 shrink-0" />
                   <span>Last updated {course.lastUpdated || 'Recently'}</span>
                 </span>
-                <span className="inline-flex items-center gap-1.5">
-                  <Globe className="w-3.5 h-3.5" />
+                <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
+                  <Globe className="w-3.5 h-3.5 shrink-0" />
                   <span>{course.language || 'English'}</span>
                 </span>
-                <span className="inline-flex items-center gap-1.5">
-                  <Award className="w-3.5 h-3.5" />
+                <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
+                  <Award className="w-3.5 h-3.5 shrink-0" />
                   <span>Certificate included</span>
                 </span>
               </div>

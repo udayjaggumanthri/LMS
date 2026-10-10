@@ -44,6 +44,17 @@ export const PublicLayout: React.FC = () => {
   const [newsletterEmail, setNewsletterEmail] = useState('');
   const [newsletterSubscribed, setNewsletterSubscribed] = useState(false);
 
+  React.useEffect(() => {
+    if (mobileMenuOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [mobileMenuOpen]);
+
   const handleLogout = () => {
     logout();
     setUserMenuOpen(false);
@@ -74,16 +85,16 @@ export const PublicLayout: React.FC = () => {
   return (
     <div className="min-h-screen flex flex-col bg-white text-slate-900">
       {/* 1. Slim Announcement Bar */}
-      <div className="bg-slate-900 text-slate-200 text-xs py-2 px-4 border-b border-slate-800">
+      <div className="bg-slate-900 text-slate-200 text-xs py-1.5 sm:py-2 px-3 sm:px-4 border-b border-slate-800">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <span className="font-semibold text-emerald-400">PRAJNA FLOW</span>
-            <span aria-hidden="true" className="text-slate-600">·</span>
-            <span>Skill-based courses crafted by industry practitioners</span>
-            <span aria-hidden="true" className="text-slate-600 hidden sm:inline">·</span>
-            <span className="hidden sm:inline text-slate-300">Lifetime access & 30-day refund guarantee</span>
+          <div className="flex items-center gap-1.5 sm:gap-2 text-[11px] sm:text-xs overflow-hidden">
+            <span className="font-semibold text-emerald-400 shrink-0">PRAJNA FLOW</span>
+            <span aria-hidden="true" className="text-slate-600 shrink-0">·</span>
+            <span className="truncate">Skill-based courses crafted by industry practitioners</span>
+            <span aria-hidden="true" className="text-slate-600 hidden sm:inline shrink-0">·</span>
+            <span className="hidden sm:inline text-slate-300 shrink-0">Lifetime access & 30-day refund guarantee</span>
           </div>
-          <div className="hidden md:flex items-center gap-4 text-slate-400 text-[11px]">
+          <div className="hidden lg:flex items-center gap-4 text-slate-400 text-[11px] shrink-0">
             <Link to="/brand" className="hover:text-emerald-400 transition-colors">
               Brand Guide
             </Link>
@@ -107,7 +118,7 @@ export const PublicLayout: React.FC = () => {
           </div>
 
           {/* Desktop Navigation Links */}
-          <nav className="hidden md:flex items-center gap-1 lg:gap-2">
+          <nav className="hidden lg:flex items-center gap-1 lg:gap-2">
             <NavLink
               to="/"
               className={({ isActive }) =>
@@ -337,31 +348,33 @@ export const PublicLayout: React.FC = () => {
             <button
               type="button"
               onClick={() => setMobileMenuOpen(true)}
-              className="md:hidden p-2 rounded-lg text-slate-700 hover:text-slate-950 hover:bg-slate-100 border border-slate-200 transition-colors min-h-[40px] min-w-[40px] flex items-center justify-center ml-0.5"
+              className="lg:hidden p-2 rounded-lg text-slate-700 hover:text-slate-950 hover:bg-slate-100 border border-slate-200 transition-colors min-h-[40px] min-w-[40px] flex items-center justify-center ml-0.5"
               aria-label="Open mobile navigation menu"
             >
               <Menu className="w-5 h-5" />
             </button>
           </div>
         </div>
+      </header>
 
-        {/* ---------------- MOBILE OFF-CANVAS DRAWER (LEFT TO RIGHT) ---------------- */}
-        {/* Dark Backdrop */}
-        {mobileMenuOpen && (
-          <div
-            className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-xs transition-opacity duration-300 md:hidden"
-            onClick={() => setMobileMenuOpen(false)}
-            aria-hidden="true"
-          />
-        )}
+      {/* ---------------- MOBILE OFF-CANVAS DRAWER (LEFT TO RIGHT) ---------------- */}
+      {/* Dark Backdrop */}
+      {mobileMenuOpen && (
+        <div
+          className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-xs transition-opacity duration-300 lg:hidden"
+          onClick={() => setMobileMenuOpen(false)}
+          aria-hidden="true"
+        />
+      )}
 
-        {/* Side Drawer Container */}
-        <aside
-          className={`fixed inset-y-0 left-0 z-50 w-80 max-w-[85vw] bg-white shadow-2xl flex flex-col md:hidden transform transition-transform duration-300 ease-out ${
-            mobileMenuOpen ? 'translate-x-0' : '-translate-x-full pointer-events-none'
-          }`}
-          aria-label="Mobile Navigation Drawer"
-        >
+      {/* Side Drawer Container */}
+      <aside
+        className={`fixed inset-y-0 left-0 z-50 w-80 max-w-[85vw] h-screen bg-white shadow-2xl flex flex-col lg:hidden transform transition-transform duration-300 ease-out ${
+          mobileMenuOpen ? 'translate-x-0' : '-translate-x-full pointer-events-none'
+        }`}
+        style={{ backgroundColor: '#ffffff' }}
+        aria-label="Mobile Navigation Drawer"
+      >
           {/* Drawer Header */}
           <div className="p-4 border-b border-slate-200 flex items-center justify-between bg-white">
             <Logo size="sm" />
@@ -583,7 +596,6 @@ export const PublicLayout: React.FC = () => {
             </div>
           )}
         </aside>
-      </header>
 
       {/* Main Content View */}
       <main className="flex-1">
