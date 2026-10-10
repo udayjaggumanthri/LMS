@@ -41,20 +41,27 @@ class SMTPSettingsSerializer(serializers.ModelSerializer):
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
-        if data.get('password'):
+        if instance.password:
             data['passwordMasked'] = True
             data['password'] = '••••••••••••'
         else:
             data['passwordMasked'] = False
+            data['password'] = ''
         return data
+
+    def update(self, instance, validated_data):
+        new_password = validated_data.get('password')
+        if not new_password or new_password.startswith('•'):
+            validated_data.pop('password', None)
+        return super().update(instance, validated_data)
 
 
 class PaymentGatewaySettingsSerializer(serializers.ModelSerializer):
     providerName = serializers.CharField(source='provider_name', required=False)
     isEnabled = serializers.BooleanField(source='is_enabled', required=False)
     merchantName = serializers.CharField(source='merchant_name', required=False)
-    loginId = serializers.CharField(source='login_id', required=False)
-    macToken = serializers.CharField(source='mac_token', required=False)
+    loginId = serializers.CharField(source='login_id', required=False, allow_blank=True)
+    macToken = serializers.CharField(source='mac_token', required=False, allow_blank=True)
     apiEndpointUat = serializers.CharField(source='api_endpoint_uat', required=False)
     apiEndpointProd = serializers.CharField(source='api_endpoint_prod', required=False)
     statusCheckEndpointUat = serializers.CharField(source='status_check_endpoint_uat', required=False)
@@ -64,8 +71,9 @@ class PaymentGatewaySettingsSerializer(serializers.ModelSerializer):
     successUrl = serializers.CharField(source='success_url', required=False)
     failureUrl = serializers.CharField(source='failure_url', required=False)
     callbackUrl = serializers.CharField(source='callback_url', required=False)
-    whitelistedIp = serializers.CharField(source='whitelisted_ip', required=False)
+    whitelistedIp = serializers.CharField(source='whitelisted_ip', required=False, allow_blank=True)
     allowSandboxSimulationOnTimeout = serializers.BooleanField(source='allow_sandbox_simulation_on_timeout', required=False)
+    isConfigured = serializers.BooleanField(source='is_configured', read_only=True)
 
     class Meta:
         model = PaymentGatewaySettings
@@ -74,14 +82,37 @@ class PaymentGatewaySettingsSerializer(serializers.ModelSerializer):
             'mid', 'tid', 'password', 'macToken', 'apiEndpointUat', 'apiEndpointProd',
             'statusCheckEndpointUat', 'statusCheckEndpointProd', 'merchantPortalUrl',
             'merchantRegionUrl', 'successUrl', 'failureUrl', 'callbackUrl',
-            'whitelistedIp', 'allowSandboxSimulationOnTimeout'
+            'whitelistedIp', 'allowSandboxSimulationOnTimeout', 'isConfigured'
         ]
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
-        if data.get('password'):
+        if instance.password:
             data['passwordMasked'] = True
             data['password'] = '••••••••••••'
         else:
             data['passwordMasked'] = False
+            data['password'] = ''
+
+        if instance.mac_token:
+            data['hasMacToken'] = True
+            data['macTokenMasked'] = True
+            data['macToken'] = '••••••••' + (instance.mac_token[-8:] if len(instance.mac_token) >= 8 else '')
+        else:
+            data['hasMacToken'] = False
+            data['macTokenMasked'] = False
+            data['macToken'] = ''
+
         return data
+
+    def update(self, instance, validated_data):
+        new_password = validated_data.get('password')
+        if not new_password or new_password.startswith('•'):
+            validated_data.pop('password', None)
+
+        new_mac = validated_data.get('mac_token')
+        if not new_mac or new_mac.startswith('•'):
+            validated_data.pop('mac_token', None)
+
+        return super().update(instance, validated_data)
+

@@ -26,18 +26,7 @@ class NoRedirectHandler(urllib.request.HTTPRedirectHandler):
 class ToucanPayService:
     @staticmethod
     def get_settings():
-        pg_settings = PaymentGatewaySettings.objects.filter(key='toucanpay').first()
-        if not pg_settings:
-            pg_settings = PaymentGatewaySettings.objects.create(
-                key='toucanpay',
-                merchant_name='Prajnadhara Infotech Private Limited',
-                login_id='prajnadhar',
-                mid='962042872713381',
-                tid='78183008',
-                password='Password@123',
-                environment='uat'
-            )
-        return pg_settings
+        return PaymentGatewaySettings.get_settings()
 
     @staticmethod
     def compute_hash_amount(amount):
@@ -58,18 +47,22 @@ class ToucanPayService:
 
     generate_hash_amount = compute_hash_amount
 
-    @staticmethod
-    def generate_invoice_number(tid='78183008'):
+    @classmethod
+    def generate_invoice_number(cls, tid=None):
         """
         Generates a unique order/invoice number >= 15 digits as mandated by ToucanPay.
         Format: tid + ddMMyyyyHHmmss + microsecond[:3] + random 4 digits (29 digits total).
         Guarantees 100% collision-free uniqueness across retries.
         """
+        if not tid:
+            pg = cls.get_settings()
+            tid = pg.tid if pg and pg.tid else '10000000'
+        clean_tid = ''.join(filter(str.isdigit, str(tid))) or '10000000'
         now = datetime.datetime.now()
         timestamp_str = now.strftime('%d%m%Y%H%M%S')
         micro_str = f"{now.microsecond:06d}"[:3]
         suffix = random.randint(1000, 9999)
-        return f"{tid}{timestamp_str}{micro_str}{suffix}"
+        return f"{clean_tid}{timestamp_str}{micro_str}{suffix}"
 
     @classmethod
     def initiate_payment(cls, order, customer_name, customer_phone, customer_email):
@@ -78,6 +71,12 @@ class ToucanPayService:
         Returns the authentic redirect URL where the customer completes payment.
         """
         pg_settings = cls.get_settings()
+        if not pg_settings.is_configured:
+            logger.error("ToucanPay credentials (mid, tid, mac_token) are not configured.")
+            return {
+                'success': False,
+                'error': 'Payment Gateway is not configured. Platform Administrator must enter valid ToucanPay credentials in Admin Console.'
+            }
         invoice_number = cls.generate_invoice_number(pg_settings.tid)
         
         # Format transaction amount

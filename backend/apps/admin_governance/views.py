@@ -148,6 +148,12 @@ class PaymentGatewayTestView(APIView):
         from .models import PaymentGatewaySettings
 
         pg, _ = PaymentGatewaySettings.objects.get_or_create(key='toucanpay')
+        if not pg.is_configured:
+            return Response({
+                'success': False,
+                'status': 'UNCONFIGURED',
+                'message': 'Cannot test connection: Terminal ID, Merchant ID, or MAC Token is missing. Please save valid credentials first.'
+            }, status=status.HTTP_400_BAD_REQUEST)
         test_amount = str(request.data.get('testAmount', '10'))
         test_inv = f"{int(time.time() * 1000):013d}99"
         ha = hashlib.sha512(test_amount.encode()).hexdigest()

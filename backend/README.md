@@ -119,7 +119,7 @@ backend/apps/
 * **`PaymentTransaction`**:
   * `order` (ForeignKey -> Order)
   * `invoice_number` (unique 25-29 digit ToucanPay reference)
-  * `terminal_id` (TID: `78183008`)
+  * `terminal_id` (Configured Merchant Terminal ID)
   * `amount`, `currency` (`'INR'`)
   * `status` (`'initiated'` | `'pending'` | `'success'` | `'failed'`)
   * `approval_code`, `rrn`, `payer_vpa`, `action_code`
@@ -129,15 +129,17 @@ backend/apps/
 
 ### 5. `apps.admin_governance`
 * **`PaymentGatewaySettings` (Singleton Key: `'toucanpay'`)**:
-  * `mid` (`962042872713381`), `tid` (`78183008`)
-  * `login_id` (`prajnadhar`), `password` (`Password@123`)
-  * `mac_token` (RSA-256 JWT Token)
+  * `mid` (Configured Merchant Identifier)
+  * `tid` (Configured Terminal Identifier)
+  * `login_id` (Merchant Portal Login)
+  * `password` (Encrypted at rest using AES-128 Fernet)
+  * `mac_token` (Encrypted at rest using AES-128 Fernet; masked in API representations)
   * `environment` (`'uat'` | `'production'`)
-  * `api_endpoint_uat` (`https://pay.testtoucanpay.in/api/auth/getpaymentsession`)
-  * `status_check_endpoint_uat` (`https://pay.testtoucanpay.in/api/pay/v1/checkStatus`)
-  * `success_url`, `failure_url`, `callback_url`
+  * `api_endpoint_uat`, `api_endpoint_prod`
+  * `status_check_endpoint_uat`, `status_check_endpoint_prod`
+  * `success_url`, `failure_url`, `callback_url`, `whitelisted_ip`
 * **`SMTPSettings`**:
-  * Dynamic host, port, username, password, and sender addresses for transactional email receipts.
+  * Host, port, username, encrypted password, and sender configuration for transactional emails.
 
 ---
 

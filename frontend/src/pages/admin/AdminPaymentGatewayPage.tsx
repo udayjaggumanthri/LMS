@@ -33,10 +33,10 @@ export const AdminPaymentGatewayPage: React.FC = () => {
     providerName: 'ToucanPay',
     isEnabled: true,
     environment: 'uat',
-    merchantName: 'Prajnadhara Infotech Private Limited',
-    loginId: 'prajnadhar',
-    mid: '962042872713381',
-    tid: '78183008',
+    merchantName: '',
+    loginId: '',
+    mid: '',
+    tid: '',
     password: '',
     macToken: '',
     apiEndpointUat: 'https://pay.testtoucanpay.in/api/auth/getpaymentsession',
@@ -48,8 +48,8 @@ export const AdminPaymentGatewayPage: React.FC = () => {
     successUrl: 'http://localhost:3000/order-confirmation',
     failureUrl: 'http://localhost:3000/checkout?status=failed',
     callbackUrl: 'http://localhost:8000/api/payments/toucan/callback/',
-    whitelistedIp: '117.99.201.162',
-    allowSandboxSimulationOnTimeout: true
+    whitelistedIp: '',
+    allowSandboxSimulationOnTimeout: false
   });
 
   useEffect(() => {
@@ -313,7 +313,7 @@ export const AdminPaymentGatewayPage: React.FC = () => {
               required
               value={config.loginId}
               onChange={(e) => setConfig({ ...config, loginId: e.target.value })}
-              placeholder="prajnadhar"
+              placeholder="Enter Merchant Login ID"
             />
 
             <Input
@@ -321,7 +321,7 @@ export const AdminPaymentGatewayPage: React.FC = () => {
               required
               value={config.mid}
               onChange={(e) => setConfig({ ...config, mid: e.target.value })}
-              placeholder="962042872713381"
+              placeholder="Enter Merchant ID (MID)"
             />
 
             <Input
@@ -329,7 +329,7 @@ export const AdminPaymentGatewayPage: React.FC = () => {
               required
               value={config.tid}
               onChange={(e) => setConfig({ ...config, tid: e.target.value })}
-              placeholder="78183008"
+              placeholder="Enter Terminal ID (TID)"
             />
 
             <div>
@@ -338,9 +338,9 @@ export const AdminPaymentGatewayPage: React.FC = () => {
                 type="password"
                 value={config.password}
                 onChange={(e) => setConfig({ ...config, password: e.target.value })}
-                placeholder="Password@123"
+                placeholder="Enter Password (leave blank to keep unchanged)"
               />
-              <span className="text-[10px] text-slate-400 mt-0.5 block">Stored securely for dashboard login</span>
+              <span className="text-[10px] text-slate-400 mt-0.5 block">Stored encrypted with AES at rest in database</span>
             </div>
 
             <div>
@@ -357,21 +357,23 @@ export const AdminPaymentGatewayPage: React.FC = () => {
 
           <div>
             <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-1.5 flex items-center justify-between">
-              <span>Mac Token (RS256 JWT Authorization Key)</span>
-              <button
-                type="button"
-                onClick={() => copyToClipboard(config.macToken, 'Mac Token')}
-                className="text-emerald-700 hover:text-emerald-900 text-[11px] font-medium flex items-center gap-1 normal-case"
-              >
-                <Copy className="w-3 h-3" /> Copy Token
-              </button>
+              <span>Mac Token (RS256 JWT Authorization Key - Encrypted at Rest)</span>
+              {config.macToken && !config.macToken.startsWith('••••') && (
+                <button
+                  type="button"
+                  onClick={() => copyToClipboard(config.macToken, 'Mac Token')}
+                  className="text-emerald-700 hover:text-emerald-900 text-[11px] font-medium flex items-center gap-1 normal-case"
+                >
+                  <Copy className="w-3 h-3" /> Copy Token
+                </button>
+              )}
             </label>
             <textarea
               required
               rows={3}
               value={config.macToken}
               onChange={(e) => setConfig({ ...config, macToken: e.target.value })}
-              placeholder="eyJhbGciOiJSUzI1NiJ9..."
+              placeholder="Paste RSA256 MAC JWT Token here..."
               className="w-full bg-slate-50 text-slate-900 border border-slate-300 rounded p-2.5 text-xs font-mono focus:outline-none focus:ring-2 focus:ring-emerald-700"
             />
             <p className="text-[10px] text-slate-500 mt-1">

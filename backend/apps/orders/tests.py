@@ -31,6 +31,12 @@ class ToucanPayIntegrationTests(TestCase):
         self.client = Client()
         self.client.force_login(self.user)
 
+        self.pg_settings = PaymentGatewaySettings.get_settings()
+        self.pg_settings.mid = 'TEST_MID_1001'
+        self.pg_settings.tid = '88889999'
+        self.pg_settings.mac_token = 'TEST_ENCRYPTED_MAC_TOKEN_VALUE'
+        self.pg_settings.save()
+
     def test_ha_hash_matches_toucanpay_spec(self):
         """Page 4 of Payment CheckoutPage Integration spec explicitly gives amount 23"""
         expected_hash = "6ff334e1051a09e90127ba4e309e026bb830163a2ce3a355af2ce2310ff6e7e9830d20196a3472bfc8632fd3b60cb56102a84fae70ab1a32942055eb40022225"
@@ -45,9 +51,31 @@ class ToucanPayIntegrationTests(TestCase):
 
     def test_payment_gateway_settings_singleton(self):
         settings = PaymentGatewaySettings.get_settings()
-        self.assertEqual(settings.mid, "962042872713381")
-        self.assertEqual(settings.tid, "78183008")
+        self.assertEqual(settings.mid, "TEST_MID_1001")
+        self.assertEqual(settings.tid, "88889999")
         self.assertTrue(settings.is_enabled)
+        self.assertTrue(settings.is_configured)
+
+    def test_payment_gateway_credential_encryption(self):
+        """Verifies sensitive credentials are encrypted at rest in the database"""
+        settings = PaymentGatewaySettings.get_settings()
+        settings.password = "SuperSecretPortalPass123"
+        settings.mac_token = "SampleSensitiveMacJwtTokenValue"
+        settings.save()
+
+        # Reload raw record directly from DB to inspect encrypted ciphertext
+        from django.db import connection
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT password, mac_token FROM admin_governance_paymentgatewaysettings WHERE key='toucanpay'")
+            row = cursor.fetchone()
+            db_pass, db_mac = row[0], row[1]
+            self.assertTrue(db_pass.startswith("enc:"))
+            self.assertTrue(db_mac.startswith("enc:"))
+
+        # Reload via ORM model: should automatically decrypt transparently
+        fresh = PaymentGatewaySettings.objects.get(key='toucanpay')
+        self.assertEqual(fresh.password, "SuperSecretPortalPass123")
+        self.assertEqual(fresh.mac_token, "SampleSensitiveMacJwtTokenValue")
 
     @patch('apps.orders.toucanpay_service.urllib.request.build_opener')
     def test_initiate_payment_flow(self, mock_build_opener):

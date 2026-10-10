@@ -190,17 +190,17 @@ The platform enforces strict role separation across routes, navigation items, an
 
 ---
 
-## 💳 Toucan Payments Live Gateway Integration
+## 💳 Toucan Payments Gateway Architecture
 
-Prajnadhara EDU features a native integration with the **Toucan Payments (ToucanPay)** gateway cluster:
+Prajnadhara EDU features a dynamic, enterprise-grade integration with the **Toucan Payments (ToucanPay)** gateway cluster:
 
-- **Merchant Identifier (MID):** `962042872713381`
-- **Terminal Identifier (TID):** `78183008`
-- **Authentication:** RSA-256 JWT MAC Token signature
-- **Security Checksum:** SHA-512 Hex Hash of transaction amount (`ha`)
+- **Dynamic Configuration & Field Encryption:** All gateway credentials (MID, TID, MAC Token, Portal Passwords) are managed dynamically through the Admin Console (`/admin/payment-gateway`) and encrypted at rest in the database using AES-128 (Fernet) authenticated encryption.
+- **Enterprise Secret Masking:** API endpoints automatically mask sensitive tokens (`••••••••`) to prevent credential leakage.
+- **Authentication:** RSA-256 JWT MAC Token signature dynamically injected from encrypted database settings.
+- **Security Checksum:** SHA-512 Hex Hash of transaction amount (`ha`) conforming to ToucanPay specifications.
 - **Collision-Free Invoices:** Unique timestamp + microsecond + randomized nonce guarantees that duplicate order attempts never collide on ToucanPay servers.
-- **Duplicate Protection:** Backend rejects cart additions and checkouts if the learner already has an active enrollment for the requested course.
-- **Graceful Redirection:** Automatically parses redirect data, intercepts hash callbacks, verifies transaction status with ToucanPay's `checkStatus` API, provisions curriculum access, and generates official GST-compliant tax invoices.
+- **Duplicate Purchase Guard:** Backend prevents checkout if the learner already holds an active enrollment for any course in the cart.
+- **Graceful Redirection & Reconciliation:** Automatically handles hosted checkout redirects, verifies transaction status with ToucanPay's `checkStatus` API, provisions student enrollments, and generates GST-compliant tax invoices.
 
 ---
 

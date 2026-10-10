@@ -280,7 +280,7 @@ export const CheckoutPage: React.FC = () => {
                   </div>
                 </div>
                 <div className="hidden sm:block text-right">
-                  <span className="text-[10px] font-mono text-emerald-800 font-semibold block">TID: 78183008</span>
+                  <span className="text-[10px] font-semibold text-emerald-800 block">Instant &amp; Secure</span>
                 </div>
               </button>
 
