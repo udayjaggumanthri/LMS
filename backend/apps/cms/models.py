@@ -44,3 +44,40 @@ class PageSection(TimeStampedModel):
 
     def __str__(self):
         return f"{self.page.slug} :: {self.section_key} ({self.section_name})"
+
+
+class BlogCategory(TimeStampedModel):
+    name = models.CharField(max_length=100)
+    slug = models.SlugField(max_length=100, unique=True)
+    description = models.TextField(blank=True, default='')
+
+    class Meta:
+        verbose_name_plural = 'Blog Categories'
+        ordering = ['name']
+
+    def __str__(self):
+        return self.name
+
+
+class BlogPost(TimeStampedModel):
+    title = models.CharField(max_length=255)
+    slug = models.SlugField(max_length=255, unique=True)
+    category = models.CharField(max_length=100, default='Technology')
+    category_rel = models.ForeignKey(BlogCategory, on_delete=models.SET_NULL, null=True, blank=True, related_name='posts')
+    excerpt = models.TextField(help_text="Short teaser paragraph for cards and SEO")
+    content = models.TextField(help_text="Full markdown or HTML content")
+    cover_image = models.URLField(max_length=500, blank=True, default='')
+    author_name = models.CharField(max_length=150, default='Prajnadhara Faculty')
+    author_avatar = models.URLField(max_length=500, blank=True, default='')
+    author_role = models.CharField(max_length=150, blank=True, default='Lead Instructor')
+    read_time = models.CharField(max_length=50, default='5 min read')
+    views_count = models.IntegerField(default=0)
+    is_published = models.BooleanField(default=True)
+    featured = models.BooleanField(default=False)
+    published_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return self.title

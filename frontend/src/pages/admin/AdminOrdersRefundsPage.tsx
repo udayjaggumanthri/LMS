@@ -71,7 +71,7 @@ export const AdminOrdersRefundsPage: React.FC = () => {
       key: 'status',
       header: 'Status',
       render: (o) => (
-        <Badge variant={o.status === 'completed' ? 'success' : 'default'}>
+        <Badge variant={o.status === 'completed' ? 'success' : 'neutral'}>
           {o.status}
         </Badge>
       )

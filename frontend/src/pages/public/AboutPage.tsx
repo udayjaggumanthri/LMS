@@ -1,10 +1,55 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Breadcrumbs } from '../../components/ui/Breadcrumbs';
 import { Button } from '../../components/ui/Button';
 import { CheckCircle2, Star } from 'lucide-react';
+import { cmsService } from '../../api/cmsService';
 
 export const AboutPage: React.FC = () => {
+  const [heroCMS, setHeroCMS] = useState({
+    badge: 'What they say!!',
+    title: 'Empowering students with accessible, high-quality, and career-focused education.',
+    subtitle: 'PrajnadharaEdu is a dedicated online learning platform committed to empowering students with high-quality, accessible, and career-focused education. We provide a wide range of courses designed to help learners build strong academic foundations, develop practical skills, and achieve their professional goals.',
+    content: 'At PrajnadharaEdu, we believe in simplifying education through expert-led content, interactive learning experiences, and student-centric resources. Our mission is to bridge the gap between knowledge and real-world application by offering affordable and effective learning solutions. Whether you are a beginner or looking to upgrade your skills, PrajnadharaEdu is your trusted partner in continuous learning and career growth.',
+    primaryBtnText: 'Explore Now',
+    primaryBtnLink: '/courses',
+    secondaryBtnText: 'Contact Us',
+    secondaryBtnLink: '/contact'
+  });
+
+  const [missionCMS, setMissionCMS] = useState({
+    badge: 'your skill',
+    title: 'Why Choose Prajnadhara Edu?',
+    subtitle: 'At Prajnadhara Edu, we build a complete learning ecosystem for students and professionals. Learning here is not limited to watching lessons. It’s about practicing skills, collaborating with peers, and growing together with guidance from experienced mentors.'
+  });
+
+  useEffect(() => {
+    cmsService.getPage('about').then(data => {
+      const hero = data?.sectionMap?.['hero'] || data?.sections?.find(s => s.sectionKey === 'hero');
+      if (hero) {
+        setHeroCMS(prev => ({
+          badge: hero.badgeText || prev.badge,
+          title: hero.title || prev.title,
+          subtitle: hero.subtitle || prev.subtitle,
+          content: hero.content || prev.content,
+          primaryBtnText: hero.primaryBtnText || prev.primaryBtnText,
+          primaryBtnLink: hero.primaryBtnLink || prev.primaryBtnLink,
+          secondaryBtnText: hero.secondaryBtnText || prev.secondaryBtnText,
+          secondaryBtnLink: hero.secondaryBtnLink || prev.secondaryBtnLink
+        }));
+      }
+
+      const mission = data?.sectionMap?.['mission'] || data?.sections?.find(s => s.sectionKey === 'mission');
+      if (mission) {
+        setMissionCMS(prev => ({
+          badge: mission.badgeText || prev.badge,
+          title: mission.title || prev.title,
+          subtitle: mission.subtitle || prev.subtitle
+        }));
+      }
+    }).catch(() => {});
+  }, []);
+
   return (
     <div className="w-full text-slate-900 bg-white">
       {/* 1. Header & Hero Story */}
@@ -19,31 +64,27 @@ export const AboutPage: React.FC = () => {
           />
 
           <div className="inline-flex items-center gap-2 px-3 py-1 bg-emerald-50 border border-emerald-200 rounded text-xs font-bold uppercase tracking-wider text-emerald-900 mb-4">
-            What they say!!
+            {heroCMS.badge}
           </div>
 
           <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold font-display tracking-tight text-slate-950 leading-[1.15]">
-            Empowering students with accessible, high-quality, and career-focused education.
+            {heroCMS.title}
           </h1>
 
           <div className="mt-6 space-y-4 text-base sm:text-lg text-slate-600 leading-relaxed max-w-3xl">
-            <p>
-              PrajnadharaEdu is a dedicated online learning platform committed to empowering students with high-quality, accessible, and career-focused education. We provide a wide range of courses designed to help learners build strong academic foundations, develop practical skills, and achieve their professional goals.
-            </p>
-            <p>
-              At PrajnadharaEdu, we believe in simplifying education through expert-led content, interactive learning experiences, and student-centric resources. Our mission is to bridge the gap between knowledge and real-world application by offering affordable and effective learning solutions. Whether you are a beginner or looking to upgrade your skills, PrajnadharaEdu is your trusted partner in continuous learning and career growth.
-            </p>
+            <p>{heroCMS.subtitle}</p>
+            {heroCMS.content && <p>{heroCMS.content}</p>}
           </div>
 
           <div className="mt-8 flex flex-wrap items-center gap-3">
-            <Link to="/courses">
+            <Link to={heroCMS.primaryBtnLink}>
               <Button variant="primary" size="lg" className="bg-emerald-800 hover:bg-emerald-900 text-white font-semibold">
-                Explore Now
+                {heroCMS.primaryBtnText}
               </Button>
             </Link>
-            <Link to="/contact">
+            <Link to={heroCMS.secondaryBtnLink}>
               <Button variant="outline" size="lg" className="border-slate-300 text-slate-800 hover:bg-slate-50 font-semibold">
-                Contact Us
+                {heroCMS.secondaryBtnText}
               </Button>
             </Link>
           </div>
@@ -97,15 +138,15 @@ export const AboutPage: React.FC = () => {
       <section className="py-16 bg-slate-50 border-b border-slate-200">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 text-left">
           <div className="text-xs font-bold uppercase tracking-wider text-emerald-800 mb-2">
-            your skill
+            {missionCMS.badge}
           </div>
 
           <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold font-display text-slate-900 tracking-tight leading-tight">
-            Why Choose Prajnadhara Edu?
+            {missionCMS.title}
           </h2>
 
           <p className="mt-4 text-sm sm:text-base text-slate-600 leading-relaxed max-w-3xl">
-            At Prajnadhara Edu, we build a complete learning ecosystem for students and professionals. Learning here is not limited to watching lessons. Tt’s about practicing skills, collaborating with peers, and growing together with guidance from experienced mentors.
+            {missionCMS.subtitle}
           </p>
 
           <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 gap-4">

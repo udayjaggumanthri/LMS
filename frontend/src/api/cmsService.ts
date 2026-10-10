@@ -43,4 +43,13 @@ export const cmsService = {
     const res = await apiClient.patch(`/admin/cms/sections/${sectionId}/`, data);
     return res.data;
   },
+
+  async createSection(data: Partial<CMSSectionData> & { pageId: number }): Promise<CMSSectionData> {
+    const res = await apiClient.post('/admin/cms/sections/', data);
+    return res.data;
+  },
+
+  async deleteSection(sectionId: number): Promise<void> {
+    await apiClient.delete(`/admin/cms/sections/${sectionId}/`);
+  }
 };

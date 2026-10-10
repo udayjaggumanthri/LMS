@@ -67,10 +67,12 @@ export const QuizPlayerPage: React.FC = () => {
   const calculateScore = () => {
     let correct = 0;
     quiz.questions.forEach((q, idx) => {
-      if (selectedAnswers[idx] === q.correctOptionIndex) correct++;
+      const correctIdx = (q as any).correctAnswerIndex ?? (q as any).correctOptionIndex;
+      if (selectedAnswers[idx] === correctIdx) correct++;
     });
     const percent = Math.round((correct / quiz.questions.length) * 100);
-    const passed = percent >= quiz.passingScorePercent;
+    const passThreshold = (quiz as any).passingScore ?? (quiz as any).passingScorePercent ?? 80;
+    const passed = percent >= passThreshold;
     return { correct, percent, passed };
   };
 
@@ -102,7 +104,7 @@ export const QuizPlayerPage: React.FC = () => {
             {quiz.title}
           </h1>
           <p className="text-xs text-slate-500 mt-0.5">
-            Passing Threshold: {quiz.passingScorePercent}% · {quiz.questions.length} Questions
+            Passing Threshold: {(quiz as any).passingScore ?? (quiz as any).passingScorePercent ?? 80}% · {quiz.questions.length} Questions
           </p>
         </div>
 
@@ -226,7 +228,8 @@ export const QuizPlayerPage: React.FC = () => {
             </h3>
             {quiz.questions.map((q, idx) => {
               const userAns = selectedAnswers[idx];
-              const isCorrect = userAns === q.correctOptionIndex;
+              const correctIdx = (q as any).correctAnswerIndex ?? (q as any).correctOptionIndex ?? 0;
+              const isCorrect = userAns === correctIdx;
               return (
                 <div key={q.id} className="p-5 border border-slate-200 rounded bg-white text-xs space-y-2">
                   <div className="flex items-center justify-between">
@@ -242,7 +245,7 @@ export const QuizPlayerPage: React.FC = () => {
                     </div>
                     {!isCorrect && (
                       <div className="text-emerald-800 font-medium">
-                        <strong>Correct Answer:</strong> {q.options[q.correctOptionIndex]}
+                        <strong>Correct Answer:</strong> {q.options[correctIdx]}
                       </div>
                     )}
                     <div className="pt-1 text-slate-500 italic">

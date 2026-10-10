@@ -16,6 +16,7 @@ import { Modal } from '../../components/ui/Modal';
 import { useAdmin } from '../../context/AdminContext';
 import { useAuth } from '../../context/AuthContext';
 import { adminService } from '../../api/adminService';
+import { cmsService } from '../../api/cmsService';
 const TEACH_IMAGE = '/src/assets/images/teach_instructor_studio_1791558529974.jpg';
 
 export const TeachLandingPage: React.FC = () => {
@@ -25,6 +26,13 @@ export const TeachLandingPage: React.FC = () => {
   const [applicationModalOpen, setApplicationModalOpen] = useState(false);
   const [submittedSuccess, setSubmittedSuccess] = useState(false);
   const [allowRegistration, setAllowRegistration] = useState(false);
+
+  const [teachCMS, setTeachCMS] = useState({
+    badge: 'Prajnadhara Instructor Program',
+    title: 'Teach the tradecraft you practice every day.',
+    subtitle: 'Deliver rigorous, semester-aligned curricula on Prajnadhara EDU. Create practical courses, organize modular lessons, attach project source code, and directly publish to thousands of enrolled students.',
+    mediaUrl: TEACH_IMAGE
+  });
 
   useEffect(() => {
     adminService.getPlatformSettings()
@@ -36,9 +44,22 @@ export const TeachLandingPage: React.FC = () => {
         }
       })
       .catch(() => {
-        // default to false for strict faculty provisioning
         setAllowRegistration(false);
       });
+
+    cmsService.getPage('teach')
+      .then(data => {
+        const hero = data?.sectionMap?.['hero'] || data?.sections?.find(s => s.sectionKey === 'hero');
+        if (hero) {
+          setTeachCMS(prev => ({
+            badge: hero.badgeText || prev.badge,
+            title: hero.title || prev.title,
+            subtitle: hero.subtitle || prev.subtitle,
+            mediaUrl: hero.mediaUrl || prev.mediaUrl
+          }));
+        }
+      })
+      .catch(() => {});
   }, []);
 
   // Application form fields
@@ -71,13 +92,13 @@ export const TeachLandingPage: React.FC = () => {
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-center">
             <div className="lg:col-span-7">
               <div className="text-xs font-bold uppercase tracking-wider text-emerald-800 mb-2">
-                Prajnadhara Instructor Program
+                {teachCMS.badge}
               </div>
               <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold font-display tracking-tight text-slate-950 leading-tight">
-                Teach the tradecraft you practice every day.
+                {teachCMS.title}
               </h1>
               <p className="mt-4 text-sm sm:text-base text-slate-600 leading-relaxed max-w-xl">
-                Deliver rigorous, semester-aligned curricula on Prajnadhara EDU. Create practical courses, organize modular lessons, attach project source code, and directly publish to thousands of enrolled students.
+                {teachCMS.subtitle}
               </p>
               <div className="mt-8 flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4">
                 {allowRegistration ? (
@@ -103,7 +124,7 @@ export const TeachLandingPage: React.FC = () => {
             <div className="lg:col-span-5">
               <div className="border border-slate-200 rounded overflow-hidden bg-slate-50">
                 <img
-                  src={TEACH_IMAGE}
+                  src={teachCMS.mediaUrl}
                   alt="Instructor teaching with dual monitor setup"
                   className="w-full aspect-[4/3] object-cover"
                 />

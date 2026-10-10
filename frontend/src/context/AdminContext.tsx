@@ -85,11 +85,13 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         if (data && Array.isArray(data)) {
           const mapped: InstructorApplication[] = data.map((a: any) => ({
             id: String(a.id),
+            userId: String(a.user || a.userId || a.id),
             applicantName: a.applicant_name || a.applicantName || (a.user_details ? `${a.user_details.first_name} ${a.user_details.last_name}` : 'Applicant'),
             email: a.email || a.user_details?.email || '',
+            expertise: a.expertise || a.sample_topic || 'Engineering',
             experienceBio: a.experience_bio || a.experienceBio || '',
             sampleTopic: a.sample_topic || a.sampleTopic || '',
-            portfolioUrl: a.portfolio_url || a.portfolioUrl,
+            linkedinOrPortfolio: a.portfolio_url || a.portfolioUrl,
             status: a.status || 'pending',
             submittedAt: a.created_at ? new Date(a.created_at).toISOString().split('T')[0] : '2026-10-09',
             adminFeedback: a.admin_feedback || a.adminFeedback

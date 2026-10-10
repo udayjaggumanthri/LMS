@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Breadcrumbs } from '../../components/ui/Breadcrumbs';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { Mail, Clock, MapPin, CheckCircle2 } from 'lucide-react';
+import { cmsService } from '../../api/cmsService';
 
 export const ContactPage: React.FC = () => {
   const [name, setName] = useState('');
@@ -10,6 +11,25 @@ export const ContactPage: React.FC = () => {
   const [subject, setSubject] = useState('Course Purchase Support');
   const [message, setMessage] = useState('');
   const [sentSuccess, setSentSuccess] = useState(false);
+
+  const [contactCMS, setContactCMS] = useState({
+    badge: 'Support & Communications',
+    title: 'Contact Prajnadhara EDU',
+    subtitle: 'Have an inquiry regarding courses, instructor onboarding, or a 30-day refund? Our team responds within 24 hours.'
+  });
+
+  useEffect(() => {
+    cmsService.getPage('contact').then(data => {
+      const hero = data?.sectionMap?.['hero'] || data?.sections?.find(s => s.sectionKey === 'hero');
+      if (hero) {
+        setContactCMS(prev => ({
+          badge: hero.badgeText || prev.badge,
+          title: hero.title || prev.title,
+          subtitle: hero.subtitle || prev.subtitle
+        }));
+      }
+    }).catch(() => {});
+  }, []);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -30,13 +50,13 @@ export const ContactPage: React.FC = () => {
 
       <div className="pb-8 border-b border-slate-200">
         <div className="text-xs font-bold uppercase tracking-wider text-emerald-800 mb-1">
-          Support & Communications
+          {contactCMS.badge}
         </div>
         <h1 className="text-3xl font-bold font-display tracking-tight text-slate-950">
-          Contact Prajnadhara EDU
+          {contactCMS.title}
         </h1>
         <p className="mt-2 text-xs sm:text-sm text-slate-600">
-          Have an inquiry regarding courses, instructor onboarding, or a 30-day refund? Our team responds within 24 hours.
+          {contactCMS.subtitle}
         </p>
       </div>
 

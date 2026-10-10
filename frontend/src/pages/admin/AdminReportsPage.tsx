@@ -23,7 +23,7 @@ export const AdminReportsPage: React.FC = () => {
 
     orders.forEach(o => {
       const gst = Math.round(o.total - (o.total / 1.18));
-      csvContent += `${o.orderNumber},${o.createdAt || '2026-10'},${o.userEmail || 'learner@domain.com'},${o.total},${gst},${o.paymentMethod || 'Online'},${o.status}\n`;
+      csvContent += `${o.orderNumber},${o.createdAt || '2026-10'},${(o as any).userEmail || (o as any).email || 'learner@domain.com'},${o.total},${gst},${o.paymentMethod || 'Online'},${o.status}\n`;
     });
 
     csvContent += `\nTotal_Platform_Revenue,${totalRevenue}\n`;

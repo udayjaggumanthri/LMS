@@ -1,7 +1,8 @@
 from rest_framework import serializers
-from .models import Page, PageSection
+from .models import Page, PageSection, BlogPost, BlogCategory
 
 class PageSectionSerializer(serializers.ModelSerializer):
+    pageId = serializers.PrimaryKeyRelatedField(source='page', queryset=Page.objects.all(), required=False)
     sectionKey = serializers.CharField(source='section_key')
     sectionName = serializers.CharField(source='section_name')
     badgeText = serializers.CharField(source='badge_text', allow_blank=True, required=False)
@@ -16,7 +17,7 @@ class PageSectionSerializer(serializers.ModelSerializer):
     class Meta:
         model = PageSection
         fields = [
-            'id', 'sectionKey', 'sectionName', 'badgeText', 'title',
+            'id', 'pageId', 'sectionKey', 'sectionName', 'badgeText', 'title',
             'subtitle', 'content', 'mediaUrl', 'primaryBtnText',
             'primaryBtnLink', 'secondaryBtnText', 'secondaryBtnLink',
             'jsonData', 'order', 'isActive', 'updated_at'
@@ -48,3 +49,31 @@ class PageSerializer(serializers.ModelSerializer):
                 'jsonData': sec.json_data,
             }
         return result
+
+
+class BlogCategorySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = BlogCategory
+        fields = ['id', 'name', 'slug', 'description']
+
+
+class BlogPostSerializer(serializers.ModelSerializer):
+    coverImage = serializers.CharField(source='cover_image', required=False, allow_blank=True)
+    authorName = serializers.CharField(source='author_name', required=False)
+    authorAvatar = serializers.CharField(source='author_avatar', required=False, allow_blank=True)
+    authorRole = serializers.CharField(source='author_role', required=False, allow_blank=True)
+    readTime = serializers.CharField(source='read_time', required=False)
+    viewsCount = serializers.IntegerField(source='views_count', required=False)
+    isPublished = serializers.BooleanField(source='is_published', required=False)
+    publishedAt = serializers.DateTimeField(source='published_at', required=False)
+    createdAt = serializers.DateTimeField(source='created_at', read_only=True)
+    updatedAt = serializers.DateTimeField(source='updated_at', read_only=True)
+
+    class Meta:
+        model = BlogPost
+        fields = [
+            'id', 'title', 'slug', 'category', 'excerpt', 'content',
+            'coverImage', 'authorName', 'authorAvatar', 'authorRole',
+            'readTime', 'viewsCount', 'isPublished', 'featured',
+            'publishedAt', 'createdAt', 'updatedAt'
+        ]

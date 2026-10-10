@@ -9,6 +9,7 @@ import { WishlistProvider } from './context/WishlistContext';
 import { LearningProvider } from './context/LearningContext';
 import { AdminProvider } from './context/AdminContext';
 import { NotificationProvider } from './context/NotificationContext';
+import { BrandingProvider } from './context/BrandingContext';
 
 // Layouts & Utility
 import { PublicLayout } from './components/layout/PublicLayout';
@@ -36,6 +37,8 @@ import { TermsPage } from './pages/public/TermsPage';
 import { PrivacyPage } from './pages/public/PrivacyPage';
 import { RefundPolicyPage } from './pages/public/RefundPolicyPage';
 import { InstructorTermsPage } from './pages/public/InstructorTermsPage';
+import { BlogListPage } from './pages/public/BlogListPage';
+import { BlogDetailPage } from './pages/public/BlogDetailPage';
 import { NotFoundPage } from './pages/public/NotFoundPage';
 
 // Student Pages
@@ -70,6 +73,7 @@ import { AdminCouponsPage } from './pages/admin/AdminCouponsPage';
 import { AdminReportsPage } from './pages/admin/AdminReportsPage';
 import { AdminSettingsPage } from './pages/admin/AdminSettingsPage';
 import { AdminVisualPageEditorPage } from './pages/admin/AdminVisualPageEditorPage';
+import { AdminBlogManagementPage } from './pages/admin/AdminBlogManagementPage';
 import { AdminMediaLibraryPage } from './pages/admin/AdminMediaLibraryPage';
 import { AdminSMTPSettingsPage } from './pages/admin/AdminSMTPSettingsPage';
 import { AdminPaymentGatewayPage } from './pages/admin/AdminPaymentGatewayPage';
@@ -85,7 +89,8 @@ export default function App() {
               <LearningProvider>
                 <AdminProvider>
                   <NotificationProvider>
-                    <Routes>
+                    <BrandingProvider>
+                      <Routes>
                       {/* Public Marketplace Route Tree */}
                       <Route element={<PublicLayout />}>
                         <Route path="/" element={<HomePage />} />
@@ -110,6 +115,9 @@ export default function App() {
                         <Route path="/privacy" element={<PrivacyPage />} />
                         <Route path="/refund-policy" element={<RefundPolicyPage />} />
                         <Route path="/instructor-terms" element={<InstructorTermsPage />} />
+                        <Route path="/blog" element={<BlogListPage />} />
+                        <Route path="/blogs" element={<BlogListPage />} />
+                        <Route path="/blog/:slug" element={<BlogDetailPage />} />
                         <Route path="*" element={<NotFoundPage />} />
                       </Route>
 
@@ -142,6 +150,7 @@ export default function App() {
                         {/* Admin Center */}
                         <Route path="/admin/dashboard" element={<AdminDashboardPage />} />
                         <Route path="/admin/page-editor" element={<AdminVisualPageEditorPage />} />
+                        <Route path="/admin/blogs" element={<AdminBlogManagementPage />} />
                         <Route path="/admin/media-library" element={<AdminMediaLibraryPage />} />
                         <Route path="/admin/smtp" element={<AdminSMTPSettingsPage />} />
                         <Route path="/admin/course-reviews" element={<AdminCourseReviewQueuePage />} />
@@ -159,7 +168,8 @@ export default function App() {
                         <Route path="/admin/settings" element={<AdminSettingsPage />} />
                       </Route>
                     </Routes>
-                  </NotificationProvider>
+                  </BrandingProvider>
+                </NotificationProvider>
                 </AdminProvider>
               </LearningProvider>
             </WishlistProvider>

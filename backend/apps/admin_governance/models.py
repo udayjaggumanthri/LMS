@@ -6,6 +6,9 @@ from apps.core.encryption import EncryptedTextField, EncryptedCharField
 class PlatformSettings(TimeStampedModel):
     key = models.CharField(max_length=100, unique=True, default='global')
     platform_name = models.CharField(max_length=150, default='Prajnadhara EDU')
+    site_title = models.CharField(max_length=200, default='Prajnadhara EDU')
+    logo_url = models.CharField(max_length=500, blank=True, default='')
+    favicon_url = models.CharField(max_length=500, blank=True, default='')
     support_email = models.EmailField(default='support@prajnadhara.edu')
     
     # Financial Economics

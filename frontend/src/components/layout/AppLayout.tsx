@@ -36,6 +36,18 @@ import { useCourse } from '../../context/CourseContext';
 import { useAdmin } from '../../context/AdminContext';
 import { UserRole } from '../../types';
 
+interface NavItem {
+  label: string;
+  to: string;
+  icon: React.ReactNode;
+  badge?: string | number;
+}
+
+interface NavSection {
+  title: string;
+  items: NavItem[];
+}
+
 export const AppLayout: React.FC = () => {
   const { currentUser, currentRole, isAuthenticated, logout } = useAuth();
   const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications();
@@ -67,9 +79,9 @@ export const AppLayout: React.FC = () => {
   }
 
   const pendingApps = instructorApplications?.filter(a => a.status === 'pending').length || 0;
-  const pendingReviews = courses?.filter(c => c.status === 'review_pending').length || 0;
+  const pendingReviews = courses?.filter(c => c.status === 'in_review' || (c.status as any) === 'review_pending').length || 0;
 
-  const adminSections = [
+  const adminSections: NavSection[] = [
     {
       title: 'Platform Control',
       items: [
@@ -95,6 +107,7 @@ export const AppLayout: React.FC = () => {
     {
       title: 'Content & Media',
       items: [
+        { label: 'Blog Posts & Articles', to: '/admin/blogs', icon: <FileText className="w-4 h-4" /> },
         { label: 'Media Library', to: '/admin/media-library', icon: <Image className="w-4 h-4" /> },
         { label: 'Visual Page Editor', to: '/admin/page-editor', icon: <Layers className="w-4 h-4" /> }
       ]
@@ -117,7 +130,7 @@ export const AppLayout: React.FC = () => {
     }
   ];
 
-  const instructorSections = [
+  const instructorSections: NavSection[] = [
     {
       title: 'Teaching Studio',
       items: [
@@ -144,7 +157,7 @@ export const AppLayout: React.FC = () => {
     }
   ];
 
-  const studentSections = [
+  const studentSections: NavSection[] = [
     {
       title: 'My Academics',
       items: [
@@ -272,7 +285,7 @@ export const AppLayout: React.FC = () => {
             />
             <div className="min-w-0 flex-1">
               <div className="text-xs font-bold text-slate-900 truncate">
-                {currentUser?.name || currentUser?.username || 'User'}
+                {currentUser?.name || (currentUser as any)?.username || 'User'}
               </div>
               <div className="text-[10px] text-slate-500 truncate capitalize font-medium">
                 {currentUser?.role === 'admin' ? 'Administrator' : currentUser?.role === 'instructor' ? 'Instructor' : 'Student'}

@@ -3,6 +3,9 @@ from .models import PlatformSettings, SMTPSettings, PaymentGatewaySettings
 
 class PlatformSettingsSerializer(serializers.ModelSerializer):
     platformName = serializers.CharField(source='platform_name')
+    siteTitle = serializers.CharField(source='site_title', required=False)
+    logoUrl = serializers.CharField(source='logo_url', required=False, allow_blank=True)
+    faviconUrl = serializers.CharField(source='favicon_url', required=False, allow_blank=True)
     supportEmail = serializers.EmailField(source='support_email')
     instructorRevenueSharePercent = serializers.IntegerField(source='instructor_revenue_share_percent', required=False)
     platformFeePercent = serializers.IntegerField(source='platform_fee_percent', required=False)
@@ -15,9 +18,10 @@ class PlatformSettingsSerializer(serializers.ModelSerializer):
     class Meta:
         model = PlatformSettings
         fields = [
-            'platformName', 'supportEmail', 'instructorRevenueSharePercent',
-            'platformFeePercent', 'gstRatePercent', 'currency', 'currencySymbol',
-            'autoApproveInstructors', 'allowInstructorRegistration', 'maintenanceMode'
+            'platformName', 'siteTitle', 'logoUrl', 'faviconUrl', 'supportEmail',
+            'instructorRevenueSharePercent', 'platformFeePercent', 'gstRatePercent',
+            'currency', 'currencySymbol', 'autoApproveInstructors',
+            'allowInstructorRegistration', 'maintenanceMode'
         ]
 
 

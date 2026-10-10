@@ -19,7 +19,7 @@ export const CheckoutPage: React.FC = () => {
   const { courses } = useCourses();
 
   const [paymentMethod, setPaymentMethod] = useState<'toucanpay' | 'upi' | 'card' | 'netbanking'>('toucanpay');
-  const [fullName, setFullName] = useState(currentUser?.name || currentUser?.username || '');
+  const [fullName, setFullName] = useState(currentUser?.name || (currentUser as any)?.username || '');
   const [email, setEmail] = useState(currentUser?.email || '');
   const [phone, setPhone] = useState('9876543210');
   const [billingCountry, setBillingCountry] = useState('India');
@@ -131,7 +131,7 @@ export const CheckoutPage: React.FC = () => {
         window.location.href = toucanRes.redirectUrl;
         return;
       } else {
-        setErrorMessage(toucanRes?.error || 'ToucanPay payment session initiation failed. Please verify credentials.');
+        setErrorMessage((toucanRes as any)?.error || (toucanRes as any)?.notice || 'ToucanPay payment session initiation failed. Please verify credentials.');
         setIsProcessing(false);
       }
     } catch (err: any) {

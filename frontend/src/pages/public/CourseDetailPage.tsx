@@ -136,10 +136,10 @@ export const CourseDetailPage: React.FC = () => {
 
   const totalReviewsCount = courseReviews.length || 1;
 
-  const handleApplyCoupon = (e: React.FormEvent) => {
+  const handleApplyCoupon = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!couponCode.trim()) return;
-    const res = applyCoupon(couponCode);
+    const res = await applyCoupon(couponCode);
     setCouponMessage({ success: res.success, text: res.message });
   };
 
@@ -153,9 +153,9 @@ export const CourseDetailPage: React.FC = () => {
   };
 
   // Build curriculum accordion items
-  const curriculumAccordionItems = courseCurriculum.map((section, secIndex) => {
+  const curriculumAccordionItems = courseCurriculum.map((section: any, secIndex: number) => {
     const lectures = Array.isArray(section.lectures) ? section.lectures : [];
-    const totalMinutes = lectures.reduce((acc, l) => acc + (l.durationMinutes || 0), 0);
+    const totalMinutes = lectures.reduce((acc: number, l: any) => acc + (l.durationMinutes || 0), 0);
     return {
       id: section.id || `section-${secIndex}`,
       defaultOpen: secIndex === 0,
@@ -169,7 +169,7 @@ export const CourseDetailPage: React.FC = () => {
       ),
       content: (
         <div className="divide-y divide-slate-100">
-          {lectures.map((lecture, lIdx) => (
+          {lectures.map((lecture: any, lIdx: number) => (
             <div key={lecture.id || `lec-${lIdx}`} className="py-2.5 flex items-center justify-between text-xs text-slate-700">
               <div className="flex items-center gap-2.5">
                 {lecture.type === 'video' && <PlayCircle className="w-3.5 h-3.5 text-slate-400 shrink-0" />}
@@ -226,7 +226,7 @@ export const CourseDetailPage: React.FC = () => {
 
               {/* Badges */}
               <div className="flex items-center gap-2 mb-3">
-                {courseBadges.map((b) => (
+                {courseBadges.map((b: string) => (
                   <Badge
                     key={b}
                     variant={b === 'Bestseller' ? 'bestseller' : b === 'Highest rated' ? 'highest-rated' : 'new'}
@@ -284,7 +284,7 @@ export const CourseDetailPage: React.FC = () => {
                 What you'll learn in this masterclass
               </h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs text-slate-700">
-                {whatYouWillLearn.map((pt, i) => (
+                {whatYouWillLearn.map((pt: string, i: number) => (
                   <div key={i} className="flex items-start gap-2.5">
                     <CheckCircle2 className="w-4 h-4 text-emerald-800 shrink-0 mt-0.5" />
                     <span className="leading-relaxed">{pt}</span>
@@ -315,7 +315,7 @@ export const CourseDetailPage: React.FC = () => {
                 Requirements
               </h2>
               <ul className="list-disc list-inside space-y-1.5 text-xs text-slate-700">
-                {requirements.map((req, i) => (
+                {requirements.map((req: string, i: number) => (
                   <li key={i} className="leading-relaxed">{req}</li>
                 ))}
               </ul>

@@ -9,6 +9,7 @@ import { Logo } from '../../components/common/Logo';
 import { orderService } from '../../api/orderService';
 
 export const OrderConfirmationPage: React.FC = () => {
+  const [searchParams] = useSearchParams();
   // Parse query parameters from both searchParams and hash (for ToucanPay redirects)
   const hash = window.location.hash || '';
   const hashQueryStr = hash.includes('?') ? hash.split('?')[1] : (hash.startsWith('#/') ? '' : hash.replace(/^#/, ''));
@@ -41,7 +42,7 @@ export const OrderConfirmationPage: React.FC = () => {
 
   // Match by explicit invoice or orderId first, then fallback to fetched, then cached
   const matchedOrder = (orderId || invoice)
-    ? (orders.find(o => (orderId && String(o.id) === String(orderId)) || (invoice && (o.invoiceNumber === invoice || o.paymentId === invoice))) || fetchedOrder)
+    ? (orders.find(o => (orderId && String(o.id) === String(orderId)) || (invoice && (o.invoiceNumber === invoice || (o as any).paymentId === invoice))) || fetchedOrder)
     : (fetchedOrder || orders[0]);
 
   useEffect(() => {
@@ -217,7 +218,7 @@ export const OrderConfirmationPage: React.FC = () => {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <div className="font-bold uppercase tracking-wider text-slate-400 text-[10px] mb-1">Billed To</div>
-              <div className="font-bold text-slate-900">{currentUser?.name || currentUser?.username || 'Verified Learner'}</div>
+              <div className="font-bold text-slate-900">{currentUser?.name || (currentUser as any)?.username || 'Verified Learner'}</div>
               <div className="text-slate-500">{currentUser?.email || 'learner@prajnadhara.edu'}</div>
               <div className="text-slate-500">Bengaluru, Karnataka, India</div>
             </div>

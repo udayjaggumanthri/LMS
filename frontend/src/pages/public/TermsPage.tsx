@@ -1,7 +1,29 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Breadcrumbs } from '../../components/ui/Breadcrumbs';
+import { cmsService } from '../../api/cmsService';
 
 export const TermsPage: React.FC = () => {
+  const [termsCMS, setTermsCMS] = useState({
+    badge: 'Policy',
+    title: 'Terms & Conditions',
+    subtitle: 'Please read these terms carefully before using our website and services.',
+    content: ''
+  });
+
+  useEffect(() => {
+    cmsService.getPage('terms').then(data => {
+      const hero = data?.sectionMap?.['hero'] || data?.sections?.find(s => s.sectionKey === 'hero');
+      if (hero) {
+        setTermsCMS(prev => ({
+          badge: hero.badgeText || prev.badge,
+          title: hero.title || prev.title,
+          subtitle: hero.subtitle || prev.subtitle,
+          content: hero.content || prev.content
+        }));
+      }
+    }).catch(() => {});
+  }, []);
+
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 py-10 text-left text-slate-900">
       <Breadcrumbs
@@ -15,15 +37,21 @@ export const TermsPage: React.FC = () => {
 
       <div className="border-b border-slate-200 pb-6 mb-8">
         <div className="text-xs font-bold uppercase tracking-wider text-emerald-800 mb-1">
-          Policy
+          {termsCMS.badge}
         </div>
         <h1 className="text-3xl font-bold font-display tracking-tight text-slate-950">
-          Terms &amp; Conditions
+          {termsCMS.title}
         </h1>
         <p className="mt-1 text-sm text-slate-600">
-          Please read these terms carefully before using our website and services.
+          {termsCMS.subtitle}
         </p>
       </div>
+
+      {termsCMS.content && (
+        <div className="mb-8 p-6 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-sm leading-relaxed whitespace-pre-line">
+          {termsCMS.content}
+        </div>
+      )}
 
       <div className="space-y-8 text-sm text-slate-700 leading-relaxed max-w-3xl">
         {/* 1. Acceptance of Terms */}

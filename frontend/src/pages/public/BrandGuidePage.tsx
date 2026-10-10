@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Logo } from '../../components/common/Logo';
 import { Button } from '../../components/ui/Button';
 import { Badge } from '../../components/ui/Badge';
@@ -9,20 +9,40 @@ import { Checkbox } from '../../components/ui/Checkbox';
 import { Tabs } from '../../components/ui/Tabs';
 import { ProgressBar } from '../../components/ui/ProgressBar';
 import { Breadcrumbs } from '../../components/ui/Breadcrumbs';
+import { cmsService } from '../../api/cmsService';
 
 export const BrandGuidePage: React.FC = () => {
+  const [brandCMS, setBrandCMS] = useState({
+    badge: 'Design System & Brand Architecture',
+    title: 'Prajnadhara EDU Brand & Component Specification',
+    subtitle: 'Inspired by the Sanskrit concept of uninterrupted wisdom (Prajna + Dhara), this design system establishes a quiet, confident, enterprise-grade aesthetic. It rejects AI slop, gradients, neon glows, and pill enclosures in favor of typographic rigor, hairline 1px borders, and disciplined functional color.'
+  });
+
+  useEffect(() => {
+    cmsService.getPage('brand').then(data => {
+      const hero = data?.sectionMap?.['hero'] || data?.sections?.find(s => s.sectionKey === 'hero');
+      if (hero) {
+        setBrandCMS(prev => ({
+          badge: hero.badgeText || prev.badge,
+          title: hero.title || prev.title,
+          subtitle: hero.subtitle || prev.subtitle
+        }));
+      }
+    }).catch(() => {});
+  }, []);
+
   return (
     <div className="max-w-6xl mx-auto px-4 sm:px-6 py-12 text-left text-slate-900 space-y-16">
       {/* Brand Header */}
       <div className="border-b border-slate-200 pb-8">
         <div className="text-xs font-bold uppercase tracking-wider text-emerald-800 mb-2">
-          Design System & Brand Architecture
+          {brandCMS.badge}
         </div>
         <h1 className="text-3xl sm:text-4xl font-bold font-display tracking-tight text-slate-950">
-          Prajnadhara EDU Brand & Component Specification
+          {brandCMS.title}
         </h1>
         <p className="mt-3 text-sm text-slate-600 max-w-3xl leading-relaxed">
-          Inspired by the Sanskrit concept of uninterrupted wisdom (<em>Prajna</em> + <em>Dhara</em>), this design system establishes a quiet, confident, enterprise-grade aesthetic. It rejects AI slop, gradients, neon glows, and pill enclosures in favor of typographic rigor, hairline 1px borders, and disciplined functional color.
+          {brandCMS.subtitle}
         </p>
       </div>
 

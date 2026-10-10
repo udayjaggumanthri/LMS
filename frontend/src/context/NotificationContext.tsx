@@ -8,7 +8,7 @@ interface NotificationContextType {
   markAsRead: (id: string) => void;
   markAllAsRead: () => void;
   addNotification: (item: Omit<NotificationItem, 'id' | 'createdAt' | 'read'>) => void;
-  showToast: (type: 'success' | 'error' | 'info' | 'warning', message: string, title?: string, duration?: number) => void;
+  showToast: (arg1: 'success' | 'error' | 'info' | 'warning' | string, arg2?: string, title?: string, duration?: number) => void;
   dismissToast: (id: string) => void;
 }
 
@@ -56,11 +56,25 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
   }, []);
 
   const showToast = useCallback((
-    type: 'success' | 'error' | 'info' | 'warning',
-    message: string,
+    arg1: 'success' | 'error' | 'info' | 'warning' | string,
+    arg2?: string,
     title?: string,
     duration: number = 3500
   ) => {
+    let type: 'success' | 'error' | 'info' | 'warning' = 'info';
+    let message = '';
+    const validTypes = ['success', 'error', 'info', 'warning'];
+
+    if (validTypes.includes(arg1)) {
+      type = arg1 as any;
+      message = arg2 || '';
+    } else if (arg2 && validTypes.includes(arg2)) {
+      type = arg2 as any;
+      message = arg1;
+    } else {
+      message = arg1;
+    }
+
     const id = `toast-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`;
     const newToast: ToastMessage = { id, type, title, message };
     setToasts(prev => [...prev, newToast]);

@@ -34,15 +34,17 @@ import { CourseCard } from '../../components/ui/CourseCard';
 import { Accordion } from '../../components/ui/Accordion';
 import { useCourses } from '../../context/CourseContext';
 import { cmsService } from '../../api/cmsService';
+import { blogService, BlogPostItem } from '../../api/blogService';
 
 const HERO_IMAGE = '/src/assets/images/hero_learning_lifestyle_1791558511252.jpg';
 
 export const HomePage: React.FC = () => {
   const navigate = useNavigate();
   const { courses, categories } = useCourses();
-  const [showSampleArticles, setShowSampleArticles] = useState(false);
   const [heroSearch, setHeroSearch] = useState('');
   const [articleCategory, setArticleCategory] = useState<string>('all');
+  const [blogArticles, setBlogArticles] = useState<BlogPostItem[]>([]);
+  const [blogsLoading, setBlogsLoading] = useState<boolean>(true);
 
   const [heroCMS, setHeroCMS] = useState({
     badge: 'Practical Skill-Based Learning Marketplace',
@@ -71,6 +73,16 @@ export const HomePage: React.FC = () => {
         }));
       }
     }).catch(() => {});
+
+    // Fetch dynamic blog articles
+    blogService.getBlogs()
+      .then(data => {
+        if (data && Array.isArray(data)) {
+          setBlogArticles(data);
+        }
+      })
+      .catch(() => {})
+      .finally(() => setBlogsLoading(false));
   }, []);
 
   const handleHeroSearch = (e: React.FormEvent) => {
@@ -111,42 +123,15 @@ export const HomePage: React.FC = () => {
         id: cat.id,
         name: cat.name,
         slug: cat.slug,
-        count: cat.courseCount || courses.filter(c => c.categorySlug === cat.slug || c.category === cat.name).length,
+        count: cat.courseCount || courses.filter(c => (c as any).categorySlug === cat.slug || c.categoryId === cat.id || (c as any).category === cat.name).length,
         icon: categoryIcons[cat.id] || categoryIcons[`cat-${cat.slug}`] || <BookOpen className="w-5 h-5 text-emerald-800" />
       }))
     : topCategories;
 
-  const articles = [
-    {
-      id: 'art-1',
-      title: 'Roadmap to Becoming a Full-Stack Engineer in 2026',
-      category: 'Technology',
-      readTime: '6 min read',
-      date: 'Oct 2026',
-      excerpt: 'Essential fundamentals: strict TypeScript, React Server Components, database normalization, and automated CI/CD.'
-    },
-    {
-      id: 'art-2',
-      title: 'Why Autonomous Multi-Agent AI is Transforming Systems Architecture',
-      category: 'AI',
-      readTime: '8 min read',
-      date: 'Oct 2026',
-      excerpt: 'How tool-calling LLMs, vector memory pools, and supervisory orchestrators replace brittle monolithic codebases.'
-    },
-    {
-      id: 'art-3',
-      title: 'Demystifying Modern Cloud Deployments with Kubernetes and Terraform',
-      category: 'DevOps',
-      readTime: '5 min read',
-      date: 'Sep 2026',
-      excerpt: 'Practical infrastructure-as-code patterns to provision reliable, self-healing container clusters on any cloud provider.'
-    }
-  ];
-
   const filteredArticles =
     articleCategory === 'all'
-      ? articles
-      : articles.filter(a => a.category.toLowerCase() === articleCategory.toLowerCase());
+      ? blogArticles
+      : blogArticles.filter(a => a.category.toLowerCase() === articleCategory.toLowerCase());
 
   const faqItems = [
     {
@@ -553,7 +538,7 @@ export const HomePage: React.FC = () => {
               </h2>
             </div>
             <Link
-              to="/courses"
+              to="/blog"
               className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-800 hover:text-emerald-950 transition-colors"
             >
               <span>All articles</span>
@@ -570,75 +555,91 @@ export const HomePage: React.FC = () => {
                 onClick={() => setArticleCategory(cat)}
                 className={`px-3 py-1 rounded text-xs font-medium transition-colors ${
                   articleCategory === cat
-                    ? 'bg-emerald-800 text-white'
+                    ? 'bg-emerald-800 text-white shadow-xs'
                     : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-100'
                 }`}
               >
-                {cat === 'all' ? 'All' : cat}
+                {cat === 'all' ? 'All Articles' : cat}
               </button>
             ))}
           </div>
 
-          {/* Filter Results */}
-          {!showSampleArticles ? (
-            <div className="p-10 bg-white border border-slate-200 rounded text-center">
-              <p className="text-xs sm:text-sm text-slate-500 max-w-xl mx-auto">
-                No data were found matching your selection, you need to create Post or select Category of Widget.
-              </p>
-              <div className="mt-4">
-                <button
-                  type="button"
-                  onClick={() => setShowSampleArticles(true)}
-                  className="text-xs font-semibold text-emerald-800 hover:text-emerald-950 underline"
-                >
-                  Click to preview sample articles &rarr;
-                </button>
-              </div>
+          {/* Live Articles Grid */}
+          {blogsLoading ? (
+            <div className="p-12 text-center text-slate-500 text-xs">
+              <div className="w-8 h-8 border-3 border-emerald-700 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+              Loading latest engineering articles...
             </div>
           ) : filteredArticles.length === 0 ? (
-            <div className="p-8 bg-white border border-slate-200 rounded text-center">
-              <p className="text-xs text-slate-500">
-                No data were found matching your selection, you need to create Post or select Category of Widget.
+            <div className="p-10 bg-white border border-slate-200 rounded-xl text-center max-w-md mx-auto">
+              <p className="text-xs text-slate-600 mb-3">
+                No published articles found in the "{articleCategory}" discipline yet.
               </p>
+              <button
+                type="button"
+                onClick={() => setArticleCategory('all')}
+                className="text-xs font-semibold text-emerald-800 hover:text-emerald-950 underline"
+              >
+                Show all articles &rarr;
+              </button>
             </div>
           ) : (
-            <div className="space-y-4">
-              <div className="flex justify-end">
-                <button
-                  type="button"
-                  onClick={() => setShowSampleArticles(false)}
-                  className="text-xs text-slate-500 hover:text-slate-800 underline"
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {filteredArticles.map((art) => (
+                <article
+                  key={art.id}
+                  className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-xs hover:shadow-md hover:border-slate-300 transition-all flex flex-col justify-between group"
                 >
-                  Hide preview
-                </button>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {filteredArticles.map((art) => (
-                  <div
-                    key={art.id}
-                    className="p-5 bg-white border border-slate-200 rounded flex flex-col justify-between hover:border-slate-300 transition-colors"
-                  >
-                    <div>
-                      <div className="flex items-center justify-between text-[11px] text-slate-500 mb-2">
-                        <span className="font-semibold text-emerald-800 uppercase tracking-wider">{art.category}</span>
+                  <div>
+                    {art.coverImage && (
+                      <Link to={`/blog/${art.slug}`} className="block aspect-[16/9] overflow-hidden bg-slate-100">
+                        <img
+                          src={art.coverImage}
+                          alt={art.title}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                          loading="lazy"
+                        />
+                      </Link>
+                    )}
+                    <div className="p-5">
+                      <div className="flex items-center justify-between text-[11px] text-slate-500 mb-2.5">
+                        <span className="font-semibold text-emerald-800 uppercase tracking-wider bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200/60">
+                          {art.category}
+                        </span>
                         <span>{art.readTime}</span>
                       </div>
-                      <h3 className="font-bold text-sm text-slate-900 leading-snug">
-                        {art.title}
-                      </h3>
-                      <p className="mt-2 text-xs text-slate-600 line-clamp-3 leading-relaxed">
+                      <Link to={`/blog/${art.slug}`}>
+                        <h3 className="font-bold text-base text-slate-900 group-hover:text-emerald-900 transition-colors leading-snug line-clamp-2">
+                          {art.title}
+                        </h3>
+                      </Link>
+                      <p className="mt-2 text-xs text-slate-600 line-clamp-2 leading-relaxed">
                         {art.excerpt}
                       </p>
                     </div>
-                    <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
-                      <span>{art.date}</span>
-                      <Link to="/courses" className="text-emerald-800 font-semibold hover:underline">
-                        Read &rarr;
-                      </Link>
-                    </div>
                   </div>
-                ))}
-              </div>
+
+                  <div className="px-5 py-3.5 bg-slate-50/70 border-t border-slate-100 flex items-center justify-between text-xs">
+                    <div className="flex items-center gap-2">
+                      {art.authorAvatar ? (
+                        <img src={art.authorAvatar} alt={art.authorName} className="w-6 h-6 rounded-full object-cover" />
+                      ) : (
+                        <div className="w-6 h-6 rounded-full bg-emerald-800 text-white text-[10px] flex items-center justify-center font-bold">
+                          {art.authorName.charAt(0)}
+                        </div>
+                      )}
+                      <span className="font-medium text-slate-700 truncate max-w-[130px]">{art.authorName}</span>
+                    </div>
+                    <Link
+                      to={`/blog/${art.slug}`}
+                      className="text-emerald-800 font-semibold hover:text-emerald-950 inline-flex items-center gap-1"
+                    >
+                      <span>Read</span>
+                      <ArrowRight className="w-3.5 h-3.5" />
+                    </Link>
+                  </div>
+                </article>
+              ))}
             </div>
           )}
         </div>

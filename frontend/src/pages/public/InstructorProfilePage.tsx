@@ -9,7 +9,7 @@ export const InstructorProfilePage: React.FC = () => {
   const { courses } = useCourses();
 
   const matchingCourse = courses.find(c => String(c.instructorId) === String(id));
-  const rawInstructor = typeof matchingCourse?.instructor === 'object' ? matchingCourse.instructor : null;
+  const rawInstructor: any = typeof matchingCourse?.instructor === 'object' ? matchingCourse.instructor : null;
 
   const instructor = {
     id: id || '1',

@@ -84,33 +84,8 @@ export const PublicLayout: React.FC = () => {
 
   return (
     <div className="min-h-screen flex flex-col bg-white text-slate-900">
-      {/* 1. Slim Announcement Bar */}
-      <div className="bg-slate-900 text-slate-200 text-xs py-1.5 sm:py-2 px-3 sm:px-4 border-b border-slate-800">
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-1.5 sm:gap-2 text-[11px] sm:text-xs overflow-hidden">
-            <span className="font-semibold text-emerald-400 shrink-0">PRAJNA FLOW</span>
-            <span aria-hidden="true" className="text-slate-600 shrink-0">·</span>
-            <span className="truncate">Skill-based courses crafted by industry practitioners</span>
-            <span aria-hidden="true" className="text-slate-600 hidden sm:inline shrink-0">·</span>
-            <span className="hidden sm:inline text-slate-300 shrink-0">Lifetime access & 30-day refund guarantee</span>
-          </div>
-          <div className="hidden lg:flex items-center gap-4 text-slate-400 text-[11px] shrink-0">
-            <Link to="/brand" className="hover:text-emerald-400 transition-colors">
-              Brand Guide
-            </Link>
-            <Link to="/teach" className="hover:text-white transition-colors">
-              Become an Instructor
-            </Link>
-            <span className="text-slate-600">|</span>
-            <span className="flex items-center gap-1 text-slate-300">
-              <Globe className="w-3 h-3" /> India (English)
-            </span>
-          </div>
-        </div>
-      </div>
-
-      {/* 2. Top Navigation Bar (Enterprise Redesign) */}
-      <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200/90 shadow-2xs">
+      {/* Enhanced Sticky Header */}
+      <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200/90 shadow-xs transition-shadow">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 md:h-18 flex items-center justify-between gap-4">
           {/* Brand Logo */}
           <div className="flex items-center gap-6 shrink-0">
@@ -185,6 +160,19 @@ export const PublicLayout: React.FC = () => {
               }
             >
               Contact
+            </NavLink>
+
+            <NavLink
+              to="/blog"
+              className={({ isActive }) =>
+                `px-3 py-1.5 text-xs font-semibold rounded-lg transition-all ${
+                  isActive
+                    ? 'text-emerald-950 bg-emerald-50/90 font-bold border border-emerald-200/70 shadow-2xs'
+                    : 'text-slate-700 hover:text-slate-950 hover:bg-slate-100/70'
+                }`
+              }
+            >
+              Blog
             </NavLink>
           </nav>
 
@@ -519,6 +507,22 @@ export const PublicLayout: React.FC = () => {
               <ChevronRight className="w-4 h-4 text-slate-400" />
             </NavLink>
 
+            <NavLink
+              to="/blog"
+              onClick={() => setMobileMenuOpen(false)}
+              className={({ isActive }) =>
+                `flex items-center justify-between px-3 py-2.5 rounded-lg text-xs font-semibold transition-colors ${
+                  isActive ? 'bg-emerald-50 text-emerald-900 font-bold border border-emerald-200/60' : 'text-slate-700 hover:bg-slate-50'
+                }`
+              }
+            >
+              <div className="flex items-center gap-3">
+                <FileText className="w-4 h-4 text-emerald-700" />
+                <span>Articles &amp; Blog</span>
+              </div>
+              <ChevronRight className="w-4 h-4 text-slate-400" />
+            </NavLink>
+
             {/* Quick Actions in Mobile Drawer */}
             <div className="pt-3 pb-1 border-t border-slate-100 my-2">
               <div className="px-3 text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">
@@ -627,7 +631,7 @@ export const PublicLayout: React.FC = () => {
               </h4>
               <ul className="space-y-2 text-xs text-slate-400">
                 <li><Link to="/contact" className="hover:text-white transition-colors">Contact Us</Link></li>
-                <li><Link to="/courses" className="hover:text-white transition-colors">Blog</Link></li>
+                <li><Link to="/blog" className="hover:text-white transition-colors">Blog &amp; Articles</Link></li>
                 <li><Link to="/privacy" className="hover:text-white transition-colors">Privacy Policy</Link></li>
                 <li><Link to="/refund-policy" className="hover:text-white transition-colors">Refund Policy</Link></li>
                 <li><Link to="/terms" className="hover:text-white transition-colors">Terms & Conditions</Link></li>
@@ -669,11 +673,6 @@ export const PublicLayout: React.FC = () => {
           <div className="mt-8 pt-6 border-t border-slate-900 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-500 gap-2">
             <div>
               © 2026 All Rights Reserved By Prajnadhara Infotech Pvt Ltd
-            </div>
-            <div className="flex items-center gap-4">
-              <Link to="/brand" className="hover:text-slate-400 transition-colors">Brand Guide</Link>
-              <span aria-hidden="true">·</span>
-              <Link to="/teach" className="hover:text-slate-400 transition-colors">Teach on PrajnadharaEdu</Link>
             </div>
           </div>
         </div>

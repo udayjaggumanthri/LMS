@@ -15,9 +15,12 @@ import { adminService } from '../../api/adminService';
 import { useNotifications } from '../../context/NotificationContext';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
+import { MediaUploader } from '../../components/common/MediaUploader';
+import { useBranding } from '../../context/BrandingContext';
 
 export const AdminSettingsPage: React.FC = () => {
   const { showToast } = useNotifications();
+  const { updateBrandingState } = useBranding();
 
   const [activeTab, setActiveTab] = useState<'governance' | 'gateways' | 'identity' | 'compliance'>('governance');
   const [loading, setLoading] = useState(true);
@@ -26,6 +29,9 @@ export const AdminSettingsPage: React.FC = () => {
   // Form State
   const [formData, setFormData] = useState({
     platformName: 'Prajnadhara EDU',
+    siteTitle: 'Prajnadhara EDU – Enterprise Practical Engineering',
+    logoUrl: '',
+    faviconUrl: '',
     supportEmail: 'support@prajnadhara.edu',
     currency: 'INR',
     currencySymbol: '₹',
@@ -62,6 +68,12 @@ export const AdminSettingsPage: React.FC = () => {
 
     try {
       await adminService.updatePlatformSettings(formData);
+      updateBrandingState({
+        platformName: formData.platformName,
+        siteTitle: formData.siteTitle,
+        logoUrl: formData.logoUrl,
+        faviconUrl: formData.faviconUrl
+      });
       showToast('Global platform settings updated successfully!', 'success');
     } catch (err: any) {
       showToast(err?.message || 'Failed to save platform configuration', 'error');
@@ -258,28 +270,62 @@ export const AdminSettingsPage: React.FC = () => {
           </div>
         )}
 
-        {/* Tab 3: Identity */}
+        {/* Tab 3: Identity & Branding */}
         {activeTab === 'identity' && (
-          <div className="p-6 border border-slate-200 rounded-lg bg-white space-y-4 shadow-2xs">
-            <h3 className="font-bold text-sm text-slate-900 uppercase tracking-wider">
-              Platform Brand & Communications
-            </h3>
-
-            <Input
-              label="Platform Name"
-              value={formData.platformName}
-              onChange={(e) => setFormData({ ...formData, platformName: e.target.value })}
-              required
-            />
-
-            <Input
-              label="Marketplace Tagline / Slogan"
-              value={tagline}
-              onChange={(e) => setTagline(e.target.value)}
-              required
-            />
+          <div className="p-6 border border-slate-200 rounded-lg bg-white space-y-5 shadow-2xs">
+            <div className="border-b border-slate-100 pb-3">
+              <h3 className="font-bold text-sm text-slate-900 uppercase tracking-wider">
+                Platform Brand Identity &amp; Communications
+              </h3>
+              <p className="text-[11px] text-slate-500 mt-0.5">
+                Customize site title, logo icon, browser tab favicon, and platform naming.
+              </p>
+            </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <Input
+                label="Site Title (Browser Tab & SEO Title)"
+                value={formData.siteTitle}
+                onChange={(e) => setFormData({ ...formData, siteTitle: e.target.value })}
+                placeholder="e.g. Prajnadhara EDU – Enterprise Practical Engineering"
+                required
+              />
+
+              <Input
+                label="Platform Brand Name"
+                value={formData.platformName}
+                onChange={(e) => setFormData({ ...formData, platformName: e.target.value })}
+                placeholder="e.g. Prajnadhara EDU"
+                required
+              />
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-slate-100">
+              <MediaUploader
+                label="Storefront Header & Footer Logo"
+                value={formData.logoUrl}
+                onChange={(newUrl) => setFormData({ ...formData, logoUrl: newUrl })}
+                helperText="Upload custom logo image or select from Media Library (PNG, SVG, WebP)"
+              />
+
+              <MediaUploader
+                label="Browser Tab Favicon (ICO / PNG / SVG)"
+                value={formData.faviconUrl}
+                onChange={(newUrl) => setFormData({ ...formData, faviconUrl: newUrl })}
+                helperText="Upload 32x32 or 64x64 favicon to display in browser tabs"
+              />
+            </div>
+
+            <div className="pt-2 border-t border-slate-100">
+              <Input
+                label="Marketplace Tagline / Slogan"
+                value={tagline}
+                onChange={(e) => setTagline(e.target.value)}
+                required
+              />
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-slate-100">
               <Input
                 label="Support Inbound Email"
                 type="email"

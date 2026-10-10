@@ -15,6 +15,7 @@ import {
 import { useCourses } from '../../context/CourseContext';
 import { useNotifications } from '../../context/NotificationContext';
 import { Button } from '../../components/ui/Button';
+import { Badge } from '../../components/ui/Badge';
 import { Modal } from '../../components/ui/Modal';
 import { Course } from '../../types';
 

@@ -192,7 +192,7 @@ export const CourseProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       return c;
     }));
 
-    courseService.addReview(reviewData.courseId, { rating: reviewData.rating, comment: reviewData.content }).catch(() => {});
+    courseService.addReview(reviewData.courseId, { rating: reviewData.rating, comment: (reviewData as any).comment || (reviewData as any).content || '' }).catch(() => {});
   };
 
   const addInstructorReply = (reviewId: string, comment: string) => {
