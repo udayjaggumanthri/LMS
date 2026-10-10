@@ -55,7 +55,7 @@ export const SignInPage: React.FC = () => {
         <div className="text-center mb-6">
           <Logo size="md" className="justify-center" />
           <h1 className="mt-4 text-xl font-bold font-display text-slate-950">
-            Sign In to Prajnadhara EDU
+            Sign In to PrajnadharaEdu
           </h1>
           <p className="mt-1 text-xs text-slate-500">
             Sign in with your verified account credentials to access your workspace
@@ -124,7 +124,7 @@ export const SignInPage: React.FC = () => {
         </form>
 
         <div className="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
-          <span>New to Prajnadhara EDU?</span>
+          <span>New to PrajnadharaEdu?</span>
           <Link
             to={redirectUrl ? `/signup?redirect=${encodeURIComponent(redirectUrl)}` : '/signup'}
             className="text-emerald-800 font-semibold hover:underline"

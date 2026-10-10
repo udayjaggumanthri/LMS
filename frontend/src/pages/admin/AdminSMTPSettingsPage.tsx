@@ -31,7 +31,7 @@ export const AdminSMTPSettingsPage: React.FC = () => {
     username: '',
     password: '',
     fromEmail: 'noreply@prajnadhara.edu',
-    senderName: 'Prajnadhara EDU',
+    senderName: 'PrajnadharaEdu',
     useTls: true,
     useSsl: false,
     isEnabled: false,
@@ -249,7 +249,7 @@ export const AdminSMTPSettingsPage: React.FC = () => {
               label="Sender Display Name"
               value={formData.senderName}
               onChange={(e) => setFormData({ ...formData, senderName: e.target.value })}
-              placeholder="Prajnadhara EDU"
+              placeholder="PrajnadharaEdu"
               required
             />
           </div>

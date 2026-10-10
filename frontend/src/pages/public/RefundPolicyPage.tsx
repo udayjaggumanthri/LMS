@@ -64,7 +64,7 @@ export const RefundPolicyPage: React.FC = () => {
             <span>1. 30-Day Money-Back Guarantee</span>
           </h2>
           <p>
-            At Prajnadhara EDU, we stand behind the pedagogical rigor and practical depth of our courses. If you are unsatisfied with a course you purchased, you may request a full refund within 30 days of the original purchase date, provided the course completion criteria have not been exceeded.
+            At PrajnadharaEdu, we stand behind the pedagogical rigor and practical depth of our courses. If you are unsatisfied with a course you purchased, you may request a full refund within 30 days of the original purchase date, provided the course completion criteria have not been exceeded.
           </p>
         </section>
 

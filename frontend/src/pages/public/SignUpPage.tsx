@@ -81,7 +81,7 @@ export const SignUpPage: React.FC = () => {
             Create Your Account
           </h1>
           <p className="mt-1 text-xs text-slate-500">
-            Join practical engineering tracks and masterclasses on Prajnadhara EDU
+            Join practical engineering tracks and masterclasses on PrajnadharaEdu
           </p>
         </div>
 

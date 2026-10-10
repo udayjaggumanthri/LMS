@@ -136,25 +136,25 @@ export const HomePage: React.FC = () => {
   const faqItems = [
     {
       id: 'faq-1',
-      title: 'How does Prajnadhara Edu differ from traditional institutes or universities?',
+      title: 'How does PrajnadharaEdu differ from traditional institutes or universities?',
       content:
-        'Prajnadhara Edu operates as an open, practical marketplace for skill-based learning. There are no rigid admissions, semesters, batches, or academic quotas. Every course is crafted by industry practitioners and comes with lifetime access, practical projects, and a verifiable certificate of completion.'
+        'PrajnadharaEdu operates as an open, practical marketplace for skill-based learning. There are no rigid admissions, semesters, batches, or academic quotas. Every course is crafted by industry practitioners and comes with lifetime access, practical projects, and a verifiable certificate of completion.'
     },
     {
       id: 'faq-2',
       title: 'Do I get lifetime access to purchased courses?',
       content:
-        'Yes! Once enrolled in any course on Prajnadhara Edu, you receive unlimited lifetime access to all course lectures, resources, exercise files, and future curriculum updates at no extra charge.'
+        'Yes! Once enrolled in any course on PrajnadharaEdu, you receive unlimited lifetime access to all course lectures, resources, exercise files, and future curriculum updates at no extra charge.'
     },
     {
       id: 'faq-3',
-      title: 'Are Prajnadhara Edu certificates industry-recognized?',
+      title: 'Are PrajnadharaEdu certificates industry-recognized?',
       content:
         'Yes. Upon completing all lessons and passing assessment evaluations, you receive a verifiable digital certificate with a unique cryptographic verification serial number that you can attach to resumes and LinkedIn.'
     },
     {
       id: 'faq-4',
-      title: 'Can anyone apply to teach on Prajnadhara Edu?',
+      title: 'Can anyone apply to teach on PrajnadharaEdu?',
       content:
         'Yes. Experienced practitioners and instructors can apply to publish courses, set their own prices in INR, launch coupons, and earn revenue after a transparent platform commission.'
     }
@@ -351,7 +351,7 @@ export const HomePage: React.FC = () => {
         </div>
       </section>
 
-      {/* ---------------- 4. WHY CHOOSE PRAJNADHARA EDU? ---------------- */}
+      {/* ---------------- 4. WHY CHOOSE PRAJNADHARAEDU? ---------------- */}
       <section className="py-16 bg-slate-50 border-b border-slate-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-12 items-center">
@@ -361,11 +361,11 @@ export const HomePage: React.FC = () => {
               </div>
 
               <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold font-display text-slate-900 tracking-tight leading-tight">
-                Why Choose Prajnadhara Edu?
+                Why Choose PrajnadharaEdu?
               </h2>
 
               <p className="mt-4 text-sm sm:text-base text-slate-600 leading-relaxed max-w-2xl">
-                At Prajnadhara Edu, we build a complete learning ecosystem for students and professionals. Learning here is not limited to watching lessons. Tt’s about practicing skills, collaborating with peers, and growing together with guidance from experienced mentors.
+                At PrajnadharaEdu, we build a complete learning ecosystem for students and professionals. Learning here is not limited to watching lessons. Tt’s about practicing skills, collaborating with peers, and growing together with guidance from experienced mentors.
               </p>
 
               <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -406,7 +406,7 @@ export const HomePage: React.FC = () => {
                   Practical tradecraft over theoretical lectures
                 </h3>
                 <p className="text-xs text-slate-600 leading-relaxed">
-                  Every curriculum on Prajnadhara Edu contains realistic exercises, source repositories, verified quiz assessments, and instructor support.
+                  Every curriculum on PrajnadharaEdu contains realistic exercises, source repositories, verified quiz assessments, and instructor support.
                 </p>
                 <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
                   <span>30-Day Money-Back Guarantee</span>
@@ -483,7 +483,7 @@ export const HomePage: React.FC = () => {
                   ))}
                 </div>
                 <p className="text-sm text-slate-700 leading-relaxed italic">
-                  "Prajnadhara Edu helped me start my journey in web development from zero. The courses are very well structured and easy to follow. I was able to build my own website within a few weeks. Highly recommended for beginners!"
+                  "PrajnadharaEdu helped me start my journey in web development from zero. The courses are very well structured and easy to follow. I was able to build my own website within a few weeks. Highly recommended for beginners!"
                 </p>
               </div>
 
@@ -507,7 +507,7 @@ export const HomePage: React.FC = () => {
                   ))}
                 </div>
                 <p className="text-sm text-slate-700 leading-relaxed italic">
-                  "The Data Science course was amazing! The explanations were simple, and the practical examples made it easy to understand complex concepts. I feel confident working with data now. Thank you Prajnadhara Edu!"
+                  "The Data Science course was amazing! The explanations were simple, and the practical examples made it easy to understand complex concepts. I feel confident working with data now. Thank you PrajnadharaEdu!"
                 </p>
               </div>
 

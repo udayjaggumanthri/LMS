@@ -28,8 +28,8 @@ export const AdminSettingsPage: React.FC = () => {
 
   // Form State
   const [formData, setFormData] = useState({
-    platformName: 'Prajnadhara EDU',
-    siteTitle: 'Prajnadhara EDU – Enterprise Practical Engineering',
+    platformName: 'PrajnadharaEdu',
+    siteTitle: 'PrajnadharaEdu – Enterprise Practical Engineering',
     logoUrl: '',
     faviconUrl: '',
     supportEmail: 'support@prajnadhara.edu',
@@ -287,7 +287,7 @@ export const AdminSettingsPage: React.FC = () => {
                 label="Site Title (Browser Tab & SEO Title)"
                 value={formData.siteTitle}
                 onChange={(e) => setFormData({ ...formData, siteTitle: e.target.value })}
-                placeholder="e.g. Prajnadhara EDU – Enterprise Practical Engineering"
+                placeholder="e.g. PrajnadharaEdu – Enterprise Practical Engineering"
                 required
               />
 
@@ -295,7 +295,7 @@ export const AdminSettingsPage: React.FC = () => {
                 label="Platform Brand Name"
                 value={formData.platformName}
                 onChange={(e) => setFormData({ ...formData, platformName: e.target.value })}
-                placeholder="e.g. Prajnadhara EDU"
+                placeholder="e.g. PrajnadharaEdu"
                 required
               />
             </div>

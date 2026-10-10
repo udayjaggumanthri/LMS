@@ -19,8 +19,8 @@ export const AboutPage: React.FC = () => {
 
   const [missionCMS, setMissionCMS] = useState({
     badge: 'your skill',
-    title: 'Why Choose Prajnadhara Edu?',
-    subtitle: 'At Prajnadhara Edu, we build a complete learning ecosystem for students and professionals. Learning here is not limited to watching lessons. It’s about practicing skills, collaborating with peers, and growing together with guidance from experienced mentors.'
+    title: 'Why Choose PrajnadharaEdu?',
+    subtitle: 'At PrajnadharaEdu, we build a complete learning ecosystem for students and professionals. Learning here is not limited to watching lessons. It’s about practicing skills, collaborating with peers, and growing together with guidance from experienced mentors.'
   });
 
   useEffect(() => {
@@ -134,7 +134,7 @@ export const AboutPage: React.FC = () => {
         </div>
       </section>
 
-      {/* 3. Why Choose Prajnadhara Edu? */}
+      {/* 3. Why Choose PrajnadharaEdu? */}
       <section className="py-16 bg-slate-50 border-b border-slate-200">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 text-left">
           <div className="text-xs font-bold uppercase tracking-wider text-emerald-800 mb-2">
@@ -200,7 +200,7 @@ export const AboutPage: React.FC = () => {
                   ))}
                 </div>
                 <p className="text-sm text-slate-700 leading-relaxed italic">
-                  "Prajnadhara Edu helped me start my journey in web development from zero. The courses are very well structured and easy to follow. I was able to build my own website within a few weeks. Highly recommended for beginners!"
+                  "PrajnadharaEdu helped me start my journey in web development from zero. The courses are very well structured and easy to follow. I was able to build my own website within a few weeks. Highly recommended for beginners!"
                 </p>
               </div>
 
@@ -224,7 +224,7 @@ export const AboutPage: React.FC = () => {
                   ))}
                 </div>
                 <p className="text-sm text-slate-700 leading-relaxed italic">
-                  "The Data Science course was amazing! The explanations were simple, and the practical examples made it easy to understand complex concepts. I feel confident working with data now. Thank you Prajnadhara Edu!"
+                  "The Data Science course was amazing! The explanations were simple, and the practical examples made it easy to understand complex concepts. I feel confident working with data now. Thank you PrajnadharaEdu!"
                 </p>
               </div>
 

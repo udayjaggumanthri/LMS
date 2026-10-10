@@ -68,10 +68,10 @@ class SMTPTestEmailView(APIView):
             return Response({'error': 'Recipient email is required.'}, status=status.HTTP_400_BAD_REQUEST)
 
         from apps.core.email_service import EmailService
-        subject = "Prajnadhara EDU – SMTP Configuration Verification"
+        subject = "PrajnadharaEdu – SMTP Configuration Verification"
         html = f"""
         <div style="font-family: -apple-system, BlinkMacSystemFont, sans-serif; padding: 24px; color: #1e293b; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px;">
-            <h2 style="color: #064e3b; margin-top: 0;">Prajnadhara EDU SMTP Test</h2>
+            <h2 style="color: #064e3b; margin-top: 0;">PrajnadharaEdu SMTP Test</h2>
             <p>Congratulations! Your SMTP email service is correctly configured and successfully delivering notifications.</p>
             <p style="font-size: 13px; color: #475569;"><strong>Verified By:</strong> {request.user.email}</p>
             <p style="font-size: 12px; color: #64748b; margin-bottom: 0;">Automated test notification from Platform Admin Center.</p>

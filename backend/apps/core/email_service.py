@@ -65,7 +65,7 @@ class EmailService:
         if smtp and not smtp.send_welcome_email:
             return
 
-        subject = "Welcome to Prajnadhara EDU – Your Learning Journey Begins"
+        subject = "Welcome to PrajnadharaEdu – Your Learning Journey Begins"
         name = getattr(user, 'first_name', '') or getattr(user, 'name', '') or user.username
         html = f"""
         <!DOCTYPE html>
@@ -87,11 +87,11 @@ class EmailService:
         <body>
           <div class="container">
             <div class="header">
-              <h1>Prajnadhara EDU</h1>
+              <h1>PrajnadharaEdu</h1>
             </div>
             <div class="content">
               <div class="greeting">Hello {name},</div>
-              <p class="text">Welcome to <strong>Prajnadhara EDU</strong>! Your account has been verified and your personal learning workspace is active.</p>
+              <p class="text">Welcome to <strong>PrajnadharaEdu</strong>! Your account has been verified and your personal learning workspace is active.</p>
               <p class="text">You can explore our production syllabus tracks, enroll in masterclasses, and gain industry-ready engineering skills with live practice.</p>
               <div style="text-align: center;">
                 <a href="http://localhost:3000/courses" class="cta-btn">Explore Course Catalog &rarr;</a>
@@ -99,7 +99,7 @@ class EmailService:
               <p class="text" style="font-size: 13px; color: #64748b; margin-top: 24px;">Need help? Contact our academic support at support@prajnadhara.edu anytime.</p>
             </div>
             <div class="footer">
-              &copy; 2026 Prajnadhara EDU. All rights reserved. Practical Skill-Based Engineering.
+              &copy; 2026 PrajnadharaEdu. All rights reserved. Practical Skill-Based Engineering.
             </div>
           </div>
         </body>
@@ -113,7 +113,7 @@ class EmailService:
         if smtp and not smtp.send_purchase_receipt:
             return
 
-        subject = f"Order Confirmation & Tax Invoice #{order.order_number} – Prajnadhara EDU"
+        subject = f"Order Confirmation & Tax Invoice #{order.order_number} – PrajnadharaEdu"
         name = getattr(user, 'first_name', '') or getattr(user, 'name', '') or user.username
         items_html = ""
         for item in order.items.all():
@@ -145,7 +145,7 @@ class EmailService:
         <body>
           <div class="container">
             <div class="header">
-              <h1>Prajnadhara EDU</h1>
+              <h1>PrajnadharaEdu</h1>
               <div style="font-size: 13px; opacity: 0.9; margin-top: 4px;">Payment Confirmed & Enrollment Activated</div>
             </div>
             <div class="content">
@@ -172,7 +172,7 @@ class EmailService:
               </div>
             </div>
             <div class="footer">
-              &copy; 2026 Prajnadhara EDU. All rights reserved. GST Invoice available in Purchase History.
+              &copy; 2026 PrajnadharaEdu. All rights reserved. GST Invoice available in Purchase History.
             </div>
           </div>
         </body>

@@ -6,7 +6,7 @@ export const PrivacyPage: React.FC = () => {
   const [privacyCMS, setPrivacyCMS] = useState({
     badge: 'Policy',
     title: 'Privacy Policy',
-    subtitle: 'Last Updated: 2026 · Prajnadhara Edu',
+    subtitle: 'Last Updated: 2026 · PrajnadharaEdu',
     content: ''
   });
 
@@ -60,7 +60,7 @@ export const PrivacyPage: React.FC = () => {
             1. Introduction :
           </h2>
           <p>
-            Prajnadhara Edu ("we", "our", or "us") is committed to protecting your privacy. This policy explains how we collect, use, and safeguard your information when you access our learning platform and courses.
+            PrajnadharaEdu ("we", "our", or "us") is committed to protecting your privacy. This policy explains how we collect, use, and safeguard your information when you access our learning platform and courses.
           </p>
         </section>
 

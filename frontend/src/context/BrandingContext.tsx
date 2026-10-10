@@ -16,8 +16,8 @@ interface BrandingContextType {
 }
 
 const defaultBranding: BrandingData = {
-  platformName: 'Prajnadhara EDU',
-  siteTitle: 'Prajnadhara EDU – Enterprise Practical Engineering',
+  platformName: 'PrajnadharaEdu',
+  siteTitle: 'PrajnadharaEdu – Practical Skill-Based Engineering',
   logoUrl: '',
   faviconUrl: ''
 };

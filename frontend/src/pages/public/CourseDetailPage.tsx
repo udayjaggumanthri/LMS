@@ -776,7 +776,7 @@ export const CourseDetailPage: React.FC = () => {
                   `mailto:?subject=${encodeURIComponent(
                     `Recommendation: ${course.title}`
                   )}&body=${encodeURIComponent(
-                    `Hi,\n\nI recommend checking out this masterclass on Prajnadhara EDU:\n${course.title}\n${window.location.href}\n`
+                    `Hi,\n\nI recommend checking out this masterclass on PrajnadharaEdu:\n${course.title}\n${window.location.href}\n`
                   )}`,
                   '_self'
                 );

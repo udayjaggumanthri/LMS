@@ -208,7 +208,7 @@ export const CertificatesPage: React.FC = () => {
                 <div className="border-t border-slate-400 w-36 mt-1 pt-1 font-bold text-[11px] text-slate-900">
                   Lead Instructor
                 </div>
-                <div className="text-[10px] text-slate-500">Prajnadhara EDU Faculty</div>
+                <div className="text-[10px] text-slate-500">PrajnadharaEdu Faculty</div>
               </div>
               <div className="text-right">
                 <div className="font-serif italic text-base text-slate-800">Kavita Ramanathan</div>

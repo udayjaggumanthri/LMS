@@ -406,7 +406,7 @@ export const PublicLayout: React.FC = () => {
               </div>
             ) : (
               <div className="space-y-2">
-                <p className="text-xs text-slate-600 font-medium">Welcome to Prajnadhara EDU</p>
+                <p className="text-xs text-slate-600 font-medium">Welcome to PrajnadharaEdu</p>
                 <div className="grid grid-cols-2 gap-2">
                   <Link to="/signin" onClick={() => setMobileMenuOpen(false)}>
                     <Button variant="outline" size="sm" className="w-full justify-center">

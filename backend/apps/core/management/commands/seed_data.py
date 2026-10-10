@@ -14,13 +14,13 @@ class Command(BaseCommand):
     help = 'Seeds initial LMS database with categories, courses, instructors, coupons, and CMS content'
 
     def handle(self, *args, **options):
-        self.stdout.write(self.style.NOTICE("Initializing Prajnadhara EDU Database Seeding..."))
+        self.stdout.write(self.style.NOTICE("Initializing PrajnadharaEdu Database Seeding..."))
 
         # 1. Platform Settings
         PlatformSettings.objects.get_or_create(
             key='global',
             defaults={
-                'platform_name': 'Prajnadhara EDU',
+                'platform_name': 'PrajnadharaEdu',
                 'support_email': 'support@prajnadhara.edu',
                 'instructor_revenue_share_percent': 70,
                 'platform_fee_percent': 30,
@@ -313,7 +313,7 @@ class Command(BaseCommand):
             slug='home',
             defaults={
                 'title': 'Homepage',
-                'meta_title': 'Prajnadhara EDU — Practical Skill-Based Online Learning Marketplace',
+                'meta_title': 'PrajnadharaEdu — Practical Skill-Based Online Learning Marketplace',
                 'meta_description': 'Enterprise-grade online course marketplace for practical, skill-based engineering masterclasses.'
             }
         )
@@ -347,7 +347,7 @@ class Command(BaseCommand):
             section_key='features',
             defaults={
                 'section_name': 'Platform Value Pillars',
-                'badge_text': 'Why Prajnadhara EDU',
+                'badge_text': 'Why PrajnadharaEdu',
                 'title': 'Engineered Specifically for Practicing Technical Leaders',
                 'subtitle': 'Every track is designed with real industry architectures and peer-reviewed code standards.',
                 'json_data': {
@@ -366,7 +366,7 @@ class Command(BaseCommand):
             slug='about',
             defaults={
                 'title': 'About Us',
-                'meta_title': 'About Prajnadhara EDU',
+                'meta_title': 'About PrajnadharaEdu',
                 'meta_description': 'Our mission to elevate technical education through rigorous practical craftsmanship.'
             }
         )

@@ -261,7 +261,7 @@ export const BlogDetailPage: React.FC = () => {
             <h4 className="text-base font-bold text-slate-900">{post.authorName}</h4>
             <p className="text-xs text-slate-500 font-medium">{post.authorRole || 'Lead Technical Instructor'}</p>
             <p className="mt-2 text-xs text-slate-600 leading-relaxed">
-              Curator of production-grade engineering courses at Prajnadhara EDU. Focused on simplifying distributed architectures, autonomous AI agents, and enterprise software engineering.
+              Curator of production-grade engineering courses at PrajnadharaEdu. Focused on simplifying distributed architectures, autonomous AI agents, and enterprise software engineering.
             </p>
           </div>
         </div>

@@ -14,7 +14,7 @@ import { cmsService } from '../../api/cmsService';
 export const BrandGuidePage: React.FC = () => {
   const [brandCMS, setBrandCMS] = useState({
     badge: 'Design System & Brand Architecture',
-    title: 'Prajnadhara EDU Brand & Component Specification',
+    title: 'PrajnadharaEdu Brand & Component Specification',
     subtitle: 'Inspired by the Sanskrit concept of uninterrupted wisdom (Prajna + Dhara), this design system establishes a quiet, confident, enterprise-grade aesthetic. It rejects AI slop, gradients, neon glows, and pill enclosures in favor of typographic rigor, hairline 1px borders, and disciplined functional color.'
   });
 
@@ -142,7 +142,7 @@ export const BrandGuidePage: React.FC = () => {
               Body & UI Prose Face: Plus Jakarta Sans (Weights 400, 500, 600)
             </div>
             <p className="text-sm text-slate-700 leading-relaxed max-w-2xl">
-              Prajnadhara EDU pairs clean geometric proportions with humanistic nuances for prolonged reading comfort across technical syllabi, curriculum trees, and code breakdowns.
+              PrajnadharaEdu pairs clean geometric proportions with humanistic nuances for prolonged reading comfort across technical syllabi, curriculum trees, and code breakdowns.
             </p>
           </div>
           <div className="p-4 border border-slate-200 rounded bg-white">

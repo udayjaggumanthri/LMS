@@ -1,4 +1,4 @@
-# 🎓 Prajnadhara EDU — Enterprise Full-Stack Learning Management System
+# 🎓 PrajnadharaEdu — Enterprise Full-Stack Learning Management System
 
 > **A modern, scalable, role-governed enterprise Learning Management System & Course Marketplace** built for high-performance online education, live curriculum delivery, and seamless payment processing.
 
@@ -15,7 +15,7 @@
 
 ## 🏛️ High-Level System Architecture
 
-Prajnadhara EDU operates as a decoupled, monolithic backend with a high-speed Single Page Application (SPA) frontend:
+PrajnadharaEdu operates as a decoupled, monolithic backend with a high-speed Single Page Application (SPA) frontend:
 
 ```
 ┌────────────────────────────────────────────────────────────────────────┐
@@ -192,7 +192,7 @@ The platform enforces strict role separation across routes, navigation items, an
 
 ## 💳 Toucan Payments Gateway Architecture
 
-Prajnadhara EDU features a dynamic, enterprise-grade integration with the **Toucan Payments (ToucanPay)** gateway cluster:
+PrajnadharaEdu features a dynamic, enterprise-grade integration with the **Toucan Payments (ToucanPay)** gateway cluster:
 
 - **Dynamic Configuration & Field Encryption:** All gateway credentials (MID, TID, MAC Token, Portal Passwords) are managed dynamically through the Admin Console (`/admin/payment-gateway`) and encrypted at rest in the database using AES-128 (Fernet) authenticated encryption.
 - **Enterprise Secret Masking:** API endpoints automatically mask sensitive tokens (`••••••••`) to prevent credential leakage.
@@ -284,4 +284,4 @@ server {
 ## 📄 License & Attribution
 
 Copyright © 2026 **Prajnadhara Infotech Private Limited**. All Rights Reserved.  
-Proprietary software developed for Prajnadhara EDU educational platforms.
+Proprietary software developed for PrajnadharaEdu educational platforms.

@@ -224,7 +224,7 @@ export const OrderConfirmationPage: React.FC = () => {
             </div>
             <div className="text-right">
               <div className="font-bold uppercase tracking-wider text-slate-400 text-[10px] mb-1">Issued By</div>
-              <div className="font-bold text-slate-900">Prajnadhara EDU Marketplace</div>
+              <div className="font-bold text-slate-900">PrajnadharaEdu Marketplace</div>
               <div className="text-slate-500">GSTIN: 29AABCP1234F1Z8</div>
               <div className="text-slate-500">Outer Ring Road, Bengaluru 560103</div>
             </div>

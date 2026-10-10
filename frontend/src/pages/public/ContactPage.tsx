@@ -14,7 +14,7 @@ export const ContactPage: React.FC = () => {
 
   const [contactCMS, setContactCMS] = useState({
     badge: 'Support & Communications',
-    title: 'Contact Prajnadhara EDU',
+    title: 'Contact PrajnadharaEdu',
     subtitle: 'Have an inquiry regarding courses, instructor onboarding, or a 30-day refund? Our team responds within 24 hours.'
   });
 

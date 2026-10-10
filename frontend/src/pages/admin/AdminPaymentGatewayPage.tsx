@@ -162,7 +162,7 @@ export const AdminPaymentGatewayPage: React.FC = () => {
               </h3>
             </div>
             <p className="text-xs text-slate-300 mt-1 max-w-2xl leading-relaxed">
-              These are the system coordinates required by Toucan Payments Operations (Prashanth Nuka) to whitelist and connect Prajnadhara EDU to the gateway network:
+              These are the system coordinates required by Toucan Payments Operations (Prashanth Nuka) to whitelist and connect PrajnadharaEdu to the gateway network:
             </p>
           </div>
           <span className="shrink-0 px-2.5 py-1 rounded text-[11px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-400/30">

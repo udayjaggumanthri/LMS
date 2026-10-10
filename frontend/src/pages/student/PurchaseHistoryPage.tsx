@@ -96,7 +96,7 @@ export const PurchaseHistoryPage: React.FC = () => {
           <div className="p-4 border border-slate-200 rounded text-xs space-y-4 bg-white">
             <div className="flex justify-between items-center pb-3 border-b border-slate-100">
               <div>
-                <h3 className="font-bold text-slate-900 text-sm">Prajnadhara Edu Tax Invoice</h3>
+                <h3 className="font-bold text-slate-900 text-sm">PrajnadharaEdu Tax Invoice</h3>
                 <p className="text-[11px] text-slate-500">GSTIN: 37AAECP1234F1Z5</p>
               </div>
               <div className="text-right">

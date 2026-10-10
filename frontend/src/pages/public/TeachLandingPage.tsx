@@ -30,7 +30,7 @@ export const TeachLandingPage: React.FC = () => {
   const [teachCMS, setTeachCMS] = useState({
     badge: 'Prajnadhara Instructor Program',
     title: 'Teach the tradecraft you practice every day.',
-    subtitle: 'Deliver rigorous, semester-aligned curricula on Prajnadhara EDU. Create practical courses, organize modular lessons, attach project source code, and directly publish to thousands of enrolled students.',
+    subtitle: 'Deliver rigorous, semester-aligned curricula on PrajnadharaEdu. Create practical courses, organize modular lessons, attach project source code, and directly publish to thousands of enrolled students.',
     mediaUrl: TEACH_IMAGE
   });
 

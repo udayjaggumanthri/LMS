@@ -1,6 +1,6 @@
-# ⚙️ Prajnadhara EDU — Backend Architecture & API Specification
+# ⚙️ PrajnadharaEdu — Backend Architecture & API Specification
 
-> **Django 5 + Django REST Framework enterprise backend powering Prajnadhara EDU.** Features clean domain-driven architecture, SimpleJWT authentication, Toucan Payments gateway orchestration, automated course provisioning, dynamic admin governance, and dual database support (PostgreSQL / SQLite).
+> **Django 5 + Django REST Framework enterprise backend powering PrajnadharaEdu.** Features clean domain-driven architecture, SimpleJWT authentication, Toucan Payments gateway orchestration, automated course provisioning, dynamic admin governance, and dual database support (PostgreSQL / SQLite).
 
 ---
 
@@ -211,7 +211,7 @@ python manage.py check
 ### 1. Create Systemd Service (`/etc/systemd/system/prajnadhara-backend.service`):
 ```ini
 [Unit]
-Description=Prajnadhara EDU Django Gunicorn Daemon
+Description=PrajnadharaEdu Django Gunicorn Daemon
 After=network.target
 
 [Service]

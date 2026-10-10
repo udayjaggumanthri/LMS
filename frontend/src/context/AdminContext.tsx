@@ -72,7 +72,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
     return {
       commissionPercent: 15,
-      platformName: 'Prajnadhara EDU',
+      platformName: 'PrajnadharaEdu',
       supportEmail: 'support@prajnadhara.edu',
       minPayoutThreshold: 1000
     };

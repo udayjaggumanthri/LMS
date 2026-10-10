@@ -11,7 +11,7 @@ from rest_framework.response import Response
 def health_check(request):
     return Response({
         'status': 'healthy',
-        'service': 'Prajnadhara EDU Enterprise API',
+        'service': 'PrajnadharaEdu Enterprise API',
         'version': '1.0.0',
         'database': settings.DATABASES['default']['ENGINE'].split('.')[-1]
     })
