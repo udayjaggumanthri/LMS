@@ -47,11 +47,13 @@ env.bak/
 venv.bak/
 
 # Django Databases & Media
-*.sqlite3
-db.sqlite3
-/backend/db.sqlite3
-/backend/media/
 /backend/staticfiles/
+# Allow pre-seeded sqlite database and media assets to be tracked
+!/backend/db.sqlite3
+# Allow uploaded brand assets and logos to be tracked
+!/backend/media/
+!/backend/media/uploads/
+!/backend/media/uploads/**
 
 # Node & Frontend
 node_modules/
