@@ -2,8 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Breadcrumbs } from '../../components/ui/Breadcrumbs';
 import { Button } from '../../components/ui/Button';
-import { CheckCircle2, Star } from 'lucide-react';
+import { CheckCircle2 } from 'lucide-react';
 import { cmsService } from '../../api/cmsService';
+import { resolveMediaUrl } from '../../api/client';
 import { RichContentViewer } from '../../components/common/RichContentViewer';
 
 export const AboutPage: React.FC = () => {
@@ -15,7 +16,8 @@ export const AboutPage: React.FC = () => {
     primaryBtnText: 'Explore Now',
     primaryBtnLink: '/courses',
     secondaryBtnText: 'Contact Us',
-    secondaryBtnLink: '/contact'
+    secondaryBtnLink: '/contact',
+    mediaUrl: ''
   });
 
   const [missionCMS, setMissionCMS] = useState({
@@ -36,7 +38,8 @@ export const AboutPage: React.FC = () => {
           primaryBtnText: hero.primaryBtnText || prev.primaryBtnText,
           primaryBtnLink: hero.primaryBtnLink || prev.primaryBtnLink,
           secondaryBtnText: hero.secondaryBtnText || prev.secondaryBtnText,
-          secondaryBtnLink: hero.secondaryBtnLink || prev.secondaryBtnLink
+          secondaryBtnLink: hero.secondaryBtnLink || prev.secondaryBtnLink,
+          mediaUrl: resolveMediaUrl(hero.mediaUrl) || prev.mediaUrl
         }));
       }
 
@@ -89,6 +92,14 @@ export const AboutPage: React.FC = () => {
               </Button>
             </Link>
           </div>
+
+          {heroCMS.mediaUrl && (
+            <img
+              src={heroCMS.mediaUrl}
+              alt=""
+              className="mt-8 w-full max-h-[420px] rounded-xl border border-slate-200 object-contain bg-white"
+            />
+          )}
         </div>
       </section>
 
@@ -179,71 +190,7 @@ export const AboutPage: React.FC = () => {
         </div>
       </section>
 
-      {/* 4. Student Feedbacks */}
-      <section className="py-16 bg-white border-b border-slate-200">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 text-left">
-          <div className="max-w-2xl mb-12">
-            <div className="text-xs font-bold uppercase tracking-wider text-emerald-800 mb-1">
-              Student Feedbacks
-            </div>
-            <h2 className="text-2xl sm:text-3xl font-bold font-display text-slate-900 tracking-tight">
-              Discover how our learners gained real-world skills, boosted confidence, and achieved their career goals through PrajnadharaEdu.
-            </h2>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            {/* Sneha Reddy */}
-            <div className="p-6 bg-slate-50 border border-slate-200 rounded flex flex-col justify-between">
-              <div>
-                <div className="flex items-center gap-1 text-amber-500 mb-4">
-                  {[...Array(5)].map((_, i) => (
-                    <Star key={i} className="w-4 h-4 fill-amber-400 text-amber-400" />
-                  ))}
-                </div>
-                <p className="text-sm text-slate-700 leading-relaxed italic">
-                  "PrajnadharaEdu helped me start my journey in web development from zero. The courses are very well structured and easy to follow. I was able to build my own website within a few weeks. Highly recommended for beginners!"
-                </p>
-              </div>
-
-              <div className="mt-6 pt-4 border-t border-slate-200 flex items-center gap-3">
-                <div className="w-10 h-10 rounded bg-emerald-800 text-white font-bold flex items-center justify-center text-sm">
-                  SR
-                </div>
-                <div>
-                  <div className="font-bold text-sm text-slate-900">Sneha Reddy</div>
-                  <div className="text-xs text-slate-500">Aspiring Web Developer</div>
-                </div>
-              </div>
-            </div>
-
-            {/* Rahul Kumar */}
-            <div className="p-6 bg-slate-50 border border-slate-200 rounded flex flex-col justify-between">
-              <div>
-                <div className="flex items-center gap-1 text-amber-500 mb-4">
-                  {[...Array(5)].map((_, i) => (
-                    <Star key={i} className="w-4 h-4 fill-amber-400 text-amber-400" />
-                  ))}
-                </div>
-                <p className="text-sm text-slate-700 leading-relaxed italic">
-                  "The Data Science course was amazing! The explanations were simple, and the practical examples made it easy to understand complex concepts. I feel confident working with data now. Thank you PrajnadharaEdu!"
-                </p>
-              </div>
-
-              <div className="mt-6 pt-4 border-t border-slate-200 flex items-center gap-3">
-                <div className="w-10 h-10 rounded bg-emerald-800 text-white font-bold flex items-center justify-center text-sm">
-                  RK
-                </div>
-                <div>
-                  <div className="font-bold text-sm text-slate-900">Rahul Kumar</div>
-                  <div className="text-xs text-slate-500">Data Science Student</div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* 5. Brand Statement Callout */}
+      {/* 4. Brand Statement Callout */}
       <section className="py-12 bg-slate-50 border-b border-slate-200">
         <div className="max-w-4xl mx-auto px-4 text-center">
           <p className="text-sm sm:text-base font-medium text-slate-800 leading-relaxed">

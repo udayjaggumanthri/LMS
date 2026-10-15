@@ -23,10 +23,7 @@ class MediaUploadView(APIView):
             uploaded_by=request.user
         )
 
-        try:
-            file_url = request.build_absolute_uri(media_instance.file.url)
-        except Exception:
-            file_url = media_instance.file.url
+        file_url = media_instance.file.url
 
         return Response({
             'id': media_instance.id,
@@ -42,10 +39,7 @@ class MediaUploadView(APIView):
         media_files = MediaFile.objects.all()[:60]
         results = []
         for m in media_files:
-            try:
-                url = request.build_absolute_uri(m.file.url)
-            except Exception:
-                url = m.file.url if m.file else ''
+            url = m.file.url if m.file else ''
             results.append({
                 'id': m.id,
                 'name': m.name,

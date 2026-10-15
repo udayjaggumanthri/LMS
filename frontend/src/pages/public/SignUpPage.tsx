@@ -3,6 +3,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
+import { PasswordInput } from '../../components/ui/PasswordInput';
 import { Logo } from '../../components/common/Logo';
 import { UserRole } from '../../types';
 import { ArrowRight, AlertCircle } from 'lucide-react';
@@ -110,9 +111,8 @@ export const SignUpPage: React.FC = () => {
             placeholder="you@domain.com"
           />
 
-          <Input
+          <PasswordInput
             label="Password"
-            type="password"
             required
             value={password}
             onChange={(e) => setPassword(e.target.value)}

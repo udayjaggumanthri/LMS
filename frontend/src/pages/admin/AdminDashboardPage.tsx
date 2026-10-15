@@ -19,6 +19,7 @@ import { useLearning } from '../../context/LearningContext';
 import { adminService } from '../../api/adminService';
 import { Button } from '../../components/ui/Button';
 import { Badge } from '../../components/ui/Badge';
+import { CourseCover } from '../../components/courses/CourseCover';
 
 export const AdminDashboardPage: React.FC = () => {
   const { courses, updateCourseStatus } = useCourses();
@@ -194,7 +195,9 @@ export const AdminDashboardPage: React.FC = () => {
             {courses.slice(0, 3).map((c) => (
               <div key={c.id} className="p-3 bg-slate-50 border border-slate-200 rounded flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <img src={c.thumbnail} alt={c.title} className="w-12 h-8 rounded object-cover border border-slate-200" />
+                  <div className="w-12 h-8 rounded overflow-hidden border border-slate-200 shrink-0">
+                    <CourseCover title={c.title} category={c.subcategory} categoryId={c.categoryId} thumbnail={c.thumbnail} size="sm" />
+                  </div>
                   <div>
                     <div className="font-bold text-slate-900 truncate max-w-xs">{c.title}</div>
                     <div className="text-[11px] text-slate-500">₹{Number(c.price).toLocaleString('en-IN')} · {c.level}</div>

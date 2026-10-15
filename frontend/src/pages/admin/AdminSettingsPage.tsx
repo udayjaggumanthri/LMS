@@ -36,6 +36,16 @@ export const AdminSettingsPage: React.FC = () => {
     currency: 'INR',
     currencySymbol: '₹',
     gstRatePercent: 18,
+    legalName: 'Prajnadhara',
+    companyLine: 'Infotech Pvt Ltd',
+    invoiceAddress: '1st Floor, 7-28-6, Tanvi Castle, Tyaga Raja Nagar, Rajamahendravaram, East Godavari, Andhra Pradesh, 533101.',
+    invoicePhone: '+91 9052513666',
+    invoiceEmail: 'info@prajnadharainfotech.com',
+    gstNumber: '37AAQCP8786M1Z4',
+    invoiceDeclaration: 'We declare that this invoice reflects the actual price of the services described and that all particulars are true and correct.',
+    signatureUrl: '',
+    stampUrl: '',
+    invoiceNextNumber: 1,
     autoApproveInstructors: false,
     allowInstructorRegistration: false,
     maintenanceMode: false
@@ -43,7 +53,6 @@ export const AdminSettingsPage: React.FC = () => {
 
   const [supportHotline, setSupportHotline] = useState('+91 80 4718 2000');
   const [tagline, setTagline] = useState('Practical Skill-Based Online Learning Marketplace');
-  const [gstNumber, setGstNumber] = useState('37AABCP1824M1Z8');
   const [upiEnabled, setUpiEnabled] = useState(true);
 
   useEffect(() => {
@@ -352,17 +361,70 @@ export const AdminSettingsPage: React.FC = () => {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <Input
-                label="Marketplace Operator GSTIN"
-                value={gstNumber}
-                onChange={(e) => setGstNumber(e.target.value.toUpperCase())}
-                helper="Mandatory for statutory tax invoices and filing."
+                label="Legal name"
+                value={formData.legalName}
+                onChange={(e) => setFormData({ ...formData, legalName: e.target.value })}
+              />
+              <Input
+                label="Company line"
+                value={formData.companyLine}
+                onChange={(e) => setFormData({ ...formData, companyLine: e.target.value })}
+              />
+              <Input
+                label="Invoice address"
+                value={formData.invoiceAddress}
+                onChange={(e) => setFormData({ ...formData, invoiceAddress: e.target.value })}
+              />
+              <Input
+                label="Invoice phone"
+                value={formData.invoicePhone}
+                onChange={(e) => setFormData({ ...formData, invoicePhone: e.target.value })}
+              />
+              <Input
+                label="Invoice email"
+                type="email"
+                value={formData.invoiceEmail}
+                onChange={(e) => setFormData({ ...formData, invoiceEmail: e.target.value })}
+              />
+              <Input
+                label="GSTIN"
+                value={formData.gstNumber}
+                onChange={(e) => setFormData({ ...formData, gstNumber: e.target.value.toUpperCase() })}
               />
               <Input
                 label="Applicable GST Rate (%)"
                 type="number"
                 value={formData.gstRatePercent}
                 onChange={(e) => setFormData({ ...formData, gstRatePercent: Number(e.target.value) })}
-                helper="Standard Indian GST rate (18%)."
+                helper="Taken out of the amount the student paid. 18% is shown as 9% CGST and 9% SGST."
+              />
+              <Input
+                label="Next invoice number"
+                type="number"
+                value={formData.invoiceNextNumber}
+                onChange={(e) => setFormData({ ...formData, invoiceNextNumber: Number(e.target.value) })}
+                helper="Used for the next paid order. Numbers already issued stay as they are."
+              />
+            </div>
+            <Input
+              label="Declaration"
+              value={formData.invoiceDeclaration}
+              onChange={(e) => setFormData({ ...formData, invoiceDeclaration: e.target.value })}
+            />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <MediaUploader
+                label="Authorized signature"
+                value={formData.signatureUrl}
+                onChange={(newUrl) => setFormData({ ...formData, signatureUrl: newUrl })}
+                accept="image/png,image/webp,image/svg+xml"
+                helperText="Transparent PNG. Leave empty and the signatory line stays blank."
+              />
+              <MediaUploader
+                label="Company stamp"
+                value={formData.stampUrl}
+                onChange={(newUrl) => setFormData({ ...formData, stampUrl: newUrl })}
+                accept="image/png,image/webp,image/svg+xml"
+                helperText="Transparent PNG. It appears over the signatory line when an invoice is opened."
               />
             </div>
           </div>

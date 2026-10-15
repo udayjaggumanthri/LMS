@@ -12,7 +12,7 @@ export const CategoryPage: React.FC = () => {
 
   const category = categories.find(c => c.slug === slug);
   const categoryCourses = courses.filter(
-    c => c.categoryId === category?.id && c.status === 'published'
+    c => String(c.categoryId) === String(category?.id) && c.status === 'published'
   );
 
   if (!category) {
@@ -54,9 +54,10 @@ export const CategoryPage: React.FC = () => {
           </p>
 
           {/* Subcategories tags (unboxed text or clean buttons) */}
+          {(category.subcategories || []).length > 0 && (
           <div className="mt-6 flex items-center gap-2 flex-wrap">
             <span className="text-xs font-semibold text-slate-700">Sub-disciplines:</span>
-            {category.subcategories.map((sub, i) => (
+            {(category.subcategories || []).map((sub) => (
               <Link
                 key={sub}
                 to={`/courses?category=${category.slug}&q=${encodeURIComponent(sub)}`}
@@ -66,6 +67,7 @@ export const CategoryPage: React.FC = () => {
               </Link>
             ))}
           </div>
+          )}
         </div>
       </div>
 

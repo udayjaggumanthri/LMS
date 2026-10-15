@@ -1,27 +1,26 @@
-import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
+import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { ShieldCheck, Lock, CreditCard, Smartphone, Building, CheckCircle2 } from 'lucide-react';
 import { useCart } from '../../context/CartContext';
 import { useLearning } from '../../context/LearningContext';
 import { useAuth } from '../../context/AuthContext';
-import { useCourses } from '../../context/CourseContext';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { Breadcrumbs } from '../../components/ui/Breadcrumbs';
-import { Order, OrderItem } from '../../types';
 import { orderService } from '../../api/orderService';
 
 export const CheckoutPage: React.FC = () => {
   const navigate = useNavigate();
-  const { cartCourseIds, subtotal, discount, total, appliedCoupon, clearCart } = useCart();
-  const { addOrder, isEnrolled } = useLearning();
+  const [searchParams] = useSearchParams();
+  const paymentReturn = searchParams.get('status');
+  const { cartItems, cartReady, subtotal, discount, total, appliedCoupon } = useCart();
+  const { isEnrolled, refreshLearning } = useLearning();
   const { currentUser } = useAuth();
-  const { courses } = useCourses();
 
   const [paymentMethod, setPaymentMethod] = useState<'toucanpay' | 'upi' | 'card' | 'netbanking'>('toucanpay');
   const [fullName, setFullName] = useState(currentUser?.name || (currentUser as any)?.username || '');
   const [email, setEmail] = useState(currentUser?.email || '');
-  const [phone, setPhone] = useState('9876543210');
+  const [phone, setPhone] = useState('');
   const [billingCountry, setBillingCountry] = useState('India');
   const [billingState, setBillingState] = useState('Karnataka');
 
@@ -32,8 +31,25 @@ export const CheckoutPage: React.FC = () => {
   const [cardCvv, setCardCvv] = useState('321');
   const [selectedBank, setSelectedBank] = useState('HDFC Bank');
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isRedirecting, setIsRedirecting] = useState(false);
+  const [errorMessage, setErrorMessage] = useState(
+    paymentReturn === 'cancelled' || paymentReturn === 'failed'
+      ? 'Payment was not completed. The course stays in your cart until ToucanPay confirms payment.'
+      : ''
+  );
 
-  const cartCourses = courses.filter(c => cartCourseIds.some(id => String(id) === String(c.id)));
+  useEffect(() => {
+    if (!currentUser) return;
+    if (paymentReturn !== 'cancelled' && paymentReturn !== 'failed') return;
+    const orderId = searchParams.get('orderId') || undefined;
+    const invoiceNumber = searchParams.get('invoice') || undefined;
+    if (!orderId && !invoiceNumber) return;
+    orderService.abandonToucanPayment({ orderId, invoiceNumber })
+      .then(() => refreshLearning())
+      .catch(() => undefined);
+  }, [paymentReturn, currentUser, refreshLearning, searchParams]);
+
+  const cartCourses = cartItems;
   const validCoursesToBuy = cartCourses.filter(c => !isEnrolled(c.id));
   const alreadyEnrolledCourses = cartCourses.filter(c => isEnrolled(c.id));
 
@@ -64,6 +80,14 @@ export const CheckoutPage: React.FC = () => {
             &larr; Back to Cart
           </Link>
         </div>
+      </div>
+    );
+  }
+
+  if (!cartReady) {
+    return (
+      <div className="max-w-md mx-auto px-4 py-20 text-center text-sm text-slate-500">
+        Loading your cart…
       </div>
     );
   }
@@ -107,13 +131,17 @@ export const CheckoutPage: React.FC = () => {
     );
   }
 
-  const [isRedirecting, setIsRedirecting] = useState(false);
-  const [errorMessage, setErrorMessage] = useState('');
-
   const handleCompleteOrder = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsProcessing(true);
     setErrorMessage('');
+
+    const digits = phone.replace(/\D/g, '').slice(-10);
+    if (digits.length !== 10) {
+      setErrorMessage('Enter the 10-digit mobile number for this payment.');
+      setIsProcessing(false);
+      return;
+    }
 
     try {
       const targetCourseIds = validCoursesToBuy.map(c => c.id);
@@ -121,14 +149,18 @@ export const CheckoutPage: React.FC = () => {
         courseIds: targetCourseIds,
         couponCode: appliedCoupon?.code,
         name: fullName,
-        phone: phone,
+        phone: digits,
         email: email
       });
 
-      if (toucanRes && toucanRes.redirectUrl) {
+      if ((toucanRes as any)?.free) {
+        window.location.href = `/order-confirmation?orderId=${(toucanRes as any).orderId}`;
+        return;
+      }
+      const redirectUrl = toucanRes?.redirectUrl || '';
+      if (redirectUrl.startsWith('http') && !redirectUrl.includes('/auth/failure/')) {
         setIsRedirecting(true);
-        // Direct redirection to the live Toucan Payments checkout session
-        window.location.href = toucanRes.redirectUrl;
+        window.location.href = redirectUrl;
         return;
       } else {
         setErrorMessage((toucanRes as any)?.error || (toucanRes as any)?.notice || 'ToucanPay payment session initiation failed. Please verify credentials.');
@@ -184,7 +216,7 @@ export const CheckoutPage: React.FC = () => {
               <ShieldCheck className="w-8 h-8" />
             </div>
             <h3 className="text-lg font-bold font-display text-slate-950">
-              Connecting to Toucan Payments UAT Gateway
+              Connecting to ToucanPay
             </h3>
             <p className="text-xs text-slate-600 leading-relaxed">
               Redirecting you to the official ToucanPay secure checkout page... Please do not refresh or close this browser window.
@@ -251,17 +283,9 @@ export const CheckoutPage: React.FC = () => {
               2. Select Payment Method
             </h3>
 
-            {/* Payment Method Radio Tabs */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-3">
-              {/* Featured ToucanPay Option */}
-              <button
-                type="button"
-                onClick={() => setPaymentMethod('toucanpay')}
-                className={`p-3.5 rounded-lg border text-left transition-colors sm:col-span-3 flex items-center justify-between ${
-                  paymentMethod === 'toucanpay'
-                    ? 'border-emerald-700 bg-emerald-50 text-emerald-950 font-bold ring-1 ring-emerald-700'
-                    : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
-                }`}
+            <div className="grid grid-cols-1 gap-2.5">
+              <div
+                className="p-3.5 rounded-lg border text-left sm:col-span-3 flex items-center justify-between border-emerald-700 bg-emerald-50 text-emerald-950 font-bold ring-1 ring-emerald-700"
               >
                 <div className="flex items-center gap-3">
                   <div className="w-8 h-8 rounded bg-emerald-700 text-white font-bold flex items-center justify-center text-xs tracking-wider shrink-0">
@@ -282,117 +306,8 @@ export const CheckoutPage: React.FC = () => {
                 <div className="hidden sm:block text-right">
                   <span className="text-[10px] font-semibold text-emerald-800 block">Instant &amp; Secure</span>
                 </div>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setPaymentMethod('upi')}
-                className={`p-3 rounded border text-center transition-colors min-h-[48px] flex sm:flex-col items-center justify-start sm:justify-center gap-3 sm:gap-0 ${
-                  paymentMethod === 'upi'
-                    ? 'border-emerald-800 bg-emerald-50/50 text-emerald-950 font-bold'
-                    : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
-                }`}
-              >
-                <Smartphone className="w-4 h-4 sm:mx-auto sm:mb-1 text-emerald-800 shrink-0" />
-                <div className="text-left sm:text-center">
-                  <span className="text-xs block">UPI / QR</span>
-                  <span className="text-[10px] text-slate-400 font-normal">GPay, PhonePe, Paytm</span>
-                </div>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setPaymentMethod('card')}
-                className={`p-3 rounded border text-center transition-colors min-h-[48px] flex sm:flex-col items-center justify-start sm:justify-center gap-3 sm:gap-0 ${
-                  paymentMethod === 'card'
-                    ? 'border-emerald-800 bg-emerald-50/50 text-emerald-950 font-bold'
-                    : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
-                }`}
-              >
-                <CreditCard className="w-4 h-4 sm:mx-auto sm:mb-1 text-emerald-800 shrink-0" />
-                <div className="text-left sm:text-center">
-                  <span className="text-xs block">Cards</span>
-                  <span className="text-[10px] text-slate-400 font-normal">Visa, Mastercard, RuPay</span>
-                </div>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setPaymentMethod('netbanking')}
-                className={`p-3 rounded border text-center transition-colors min-h-[48px] flex sm:flex-col items-center justify-start sm:justify-center gap-3 sm:gap-0 ${
-                  paymentMethod === 'netbanking'
-                    ? 'border-emerald-800 bg-emerald-50/50 text-emerald-950 font-bold'
-                    : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
-                }`}
-              >
-                <Building className="w-4 h-4 sm:mx-auto sm:mb-1 text-emerald-800 shrink-0" />
-                <div className="text-left sm:text-center">
-                  <span className="text-xs block">Net Banking</span>
-                  <span className="text-[10px] text-slate-400 font-normal">All Indian Banks</span>
-                </div>
-              </button>
+              </div>
             </div>
-
-            {/* UPI Form */}
-            {paymentMethod === 'upi' && (
-              <div className="p-4 bg-slate-50 border border-slate-200 rounded space-y-3 text-xs">
-                <Input
-                  label="Virtual Payment Address (VPA / UPI ID)"
-                  value={upiId}
-                  onChange={(e) => setUpiId(e.target.value)}
-                  placeholder="e.g. username@okhdfcbank"
-                  helper="A collect request will be sent to your UPI application."
-                />
-              </div>
-            )}
-
-            {/* Card Form */}
-            {paymentMethod === 'card' && (
-              <div className="p-4 bg-slate-50 border border-slate-200 rounded space-y-3 text-xs">
-                <Input
-                  label="Card Number"
-                  value={cardNumber}
-                  onChange={(e) => setCardNumber(e.target.value)}
-                  placeholder="•••• •••• •••• ••••"
-                />
-                <div className="grid grid-cols-2 gap-3">
-                  <Input
-                    label="Expiration Date (MM/YY)"
-                    value={cardExp}
-                    onChange={(e) => setCardExp(e.target.value)}
-                    placeholder="MM/YY"
-                  />
-                  <Input
-                    label="CVV / CVC"
-                    type="password"
-                    maxLength={4}
-                    value={cardCvv}
-                    onChange={(e) => setCardCvv(e.target.value)}
-                    placeholder="•••"
-                  />
-                </div>
-              </div>
-            )}
-
-            {/* Net Banking Form */}
-            {paymentMethod === 'netbanking' && (
-              <div className="p-4 bg-slate-50 border border-slate-200 rounded space-y-2 text-xs">
-                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-1">
-                  Select Your Bank
-                </label>
-                <select
-                  value={selectedBank}
-                  onChange={(e) => setSelectedBank(e.target.value)}
-                  className="w-full bg-white border border-slate-300 rounded px-3 py-2 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-700"
-                >
-                  <option value="HDFC Bank">HDFC Bank</option>
-                  <option value="State Bank of India">State Bank of India (SBI)</option>
-                  <option value="ICICI Bank">ICICI Bank</option>
-                  <option value="Axis Bank">Axis Bank</option>
-                  <option value="Kotak Mahindra Bank">Kotak Mahindra Bank</option>
-                </select>
-              </div>
-            )}
           </div>
         </div>
 

@@ -12,8 +12,12 @@ class Order(TimeStampedModel):
     coupon_code = models.CharField(max_length=50, blank=True, default='')
     payment_method = models.CharField(max_length=50, default='card')
     payment_id = models.CharField(max_length=100, blank=True, default='')
-    status = models.CharField(max_length=30, default='completed')  # Irrevocable digital access; no refund policy
+    status = models.CharField(max_length=30, default='pending')
     invoice_number = models.CharField(max_length=50, unique=True)
+    tax_invoice_number = models.CharField(max_length=20, unique=True, null=True, blank=True)
+    billing_name = models.CharField(max_length=200, blank=True, default='')
+    billing_phone = models.CharField(max_length=20, blank=True, default='')
+    billing_email = models.EmailField(blank=True, default='')
 
     class Meta:
         ordering = ['-created_at']
@@ -61,6 +65,13 @@ class PaymentTransaction(TimeStampedModel):
     action_code = models.CharField(max_length=50, blank=True, default='')
     payer_vpa = models.CharField(max_length=150, blank=True, default='')
     raw_response = models.JSONField(default=dict, blank=True)
+    hub_transaction = models.ForeignKey(
+        'payment_hub.HubTransaction',
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='lms_transactions',
+    )
 
     class Meta:
         ordering = ['-created_at']

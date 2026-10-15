@@ -63,8 +63,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, [currentUser]);
 
-  const switchRole = (role: UserRole) => {
-    setCurrentRole(role);
+  const switchRole = (_role: UserRole) => {
+    setCurrentRole(currentUser?.role || 'student');
   };
 
   const login = async (emailOrUsername: string, pass: string): Promise<boolean> => {
@@ -102,8 +102,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const saved = await authService.updateProfile(updatedData);
       setCurrentUser(saved);
       localStorage.setItem(STORAGE_KEY, JSON.stringify(saved));
-    } catch {
-      setCurrentUser(prev => prev ? { ...prev, ...updatedData } : null);
+    } catch (err) {
+      throw err;
     }
   };
 

@@ -18,6 +18,7 @@ import {
 import { useAuth } from '../../context/AuthContext';
 import { useCourses } from '../../context/CourseContext';
 import { CourseManagementCard } from '../../components/courses/CourseManagementCard';
+import { userTeachesCourse } from '../../utils/courseFaculty';
 
 export const InstructorDashboardPage: React.FC = () => {
   const navigate = useNavigate();
@@ -25,7 +26,7 @@ export const InstructorDashboardPage: React.FC = () => {
   const { courses, qaQuestions, reviews } = useCourses();
 
   const myCourses = courses.filter(
-    c => String(c.instructorId) === String(currentUser?.id) || currentUser?.role === 'admin'
+    c => currentUser?.role === 'admin' || userTeachesCourse(c, currentUser?.id)
   );
 
   const publishedCourses = myCourses.filter(c => c.status === 'published');

@@ -10,6 +10,7 @@ class Category(TimeStampedModel):
     subcategories = models.JSONField(default=list, blank=True)
     icon_name = models.CharField(max_length=50, default='Code')
     order = models.IntegerField(default=0)
+    is_top = models.BooleanField(default=False)
 
     class Meta:
         verbose_name_plural = 'Categories'
@@ -20,7 +21,9 @@ class Category(TimeStampedModel):
 
     @property
     def course_count(self):
-        return self.courses.filter(status='published').count()
+        return Course.objects.filter(status='published').filter(
+            models.Q(category=self) | models.Q(tags__contains=[self.name])
+        ).distinct().count()
 
 
 class CourseLevel(models.TextChoices):
@@ -46,6 +49,11 @@ class Course(TimeStampedModel):
     category = models.ForeignKey(Category, on_delete=models.CASCADE, related_name='courses')
     subcategory = models.CharField(max_length=150, blank=True, default='')
     instructor = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='courses_teaching')
+    instructors = models.ManyToManyField(
+        settings.AUTH_USER_MODEL,
+        related_name='assigned_courses',
+        blank=True,
+    )
     
     price = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     original_price = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
@@ -55,7 +63,7 @@ class Course(TimeStampedModel):
     language = models.CharField(max_length=50, default='English')
     badges = models.JSONField(default=list, blank=True)
     
-    thumbnail = models.URLField(max_length=500, default='https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=800')
+    thumbnail = models.URLField(max_length=500, blank=True, default='')
     preview_video_url = models.URLField(max_length=500, blank=True, default='')
     
     what_you_will_learn = models.JSONField(default=list, blank=True)
@@ -68,7 +76,7 @@ class Course(TimeStampedModel):
     review_feedback = models.TextField(blank=True, default='')
     
     # Aggregated metrics cached for high-performance reading
-    rating = models.FloatField(default=5.0)
+    rating = models.FloatField(default=0.0)
     reviews_count = models.IntegerField(default=0)
     student_count = models.IntegerField(default=0)
     duration_hours = models.FloatField(default=0.0)
@@ -118,6 +126,19 @@ class Lecture(TimeStampedModel):
 
     def __str__(self):
         return f"{self.section.title} - {self.title}"
+
+
+class CourseAnnouncement(TimeStampedModel):
+    course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name='announcements')
+    author = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='course_announcements')
+    title = models.CharField(max_length=200)
+    body = models.TextField()
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return self.title
 
 
 class LectureResource(TimeStampedModel):

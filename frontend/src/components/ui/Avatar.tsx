@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React from 'react';
+import { User } from 'lucide-react';
 
 interface AvatarProps {
   src?: string;
@@ -8,42 +9,33 @@ interface AvatarProps {
 }
 
 export const Avatar: React.FC<AvatarProps> = ({
-  src,
-  name = 'User',
+  name,
   size = 'md',
-  className = ''
+  className = '',
 }) => {
-  const [hasError, setHasError] = useState(false);
-
   const sizeClasses = {
-    xs: 'w-6 h-6 text-[10px]',
-    sm: 'w-8 h-8 text-xs',
-    md: 'w-10 h-10 text-sm',
-    lg: 'w-14 h-14 text-base font-semibold',
-    xl: 'w-20 h-20 text-xl font-bold'
+    xs: 'w-6 h-6',
+    sm: 'w-8 h-8',
+    md: 'w-10 h-10',
+    lg: 'w-14 h-14',
+    xl: 'w-20 h-20',
   };
 
-  const getInitials = (n: string) => {
-    const parts = n.trim().split(' ');
-    if (parts.length >= 2) return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
-    return (n[0] || 'U').toUpperCase();
+  const iconClasses = {
+    xs: 'w-3.5 h-3.5',
+    sm: 'w-4 h-4',
+    md: 'w-5 h-5',
+    lg: 'w-7 h-7',
+    xl: 'w-9 h-9',
   };
 
   return (
-    <div
-      className={`relative inline-flex items-center justify-center rounded shrink-0 bg-slate-100 text-slate-800 border border-slate-200 overflow-hidden select-none font-medium ${sizeClasses[size]} ${className}`}
+    <span
+      className={`inline-flex items-center justify-center rounded-full bg-slate-100 text-slate-600 border border-slate-200 shrink-0 ${sizeClasses[size]} ${className}`}
+      aria-label={name ? `${name} profile` : 'Profile'}
+      title={name || 'Profile'}
     >
-      {src && !hasError ? (
-        <img
-          src={src}
-          alt={name}
-          onError={() => setHasError(true)}
-          className="w-full h-full object-cover"
-          loading="lazy"
-        />
-      ) : (
-        <span>{getInitials(name)}</span>
-      )}
-    </div>
+      <User className={iconClasses[size]} strokeWidth={1.75} aria-hidden="true" />
+    </span>
   );
 };

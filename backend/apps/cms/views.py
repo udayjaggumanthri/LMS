@@ -22,6 +22,7 @@ class AdminCMSPagesViewSet(viewsets.ModelViewSet):
     queryset = Page.objects.prefetch_related('sections').all()
     serializer_class = PageSerializer
     lookup_field = 'slug'
+    pagination_class = None
 
 
 class AdminCMSSectionViewSet(viewsets.ModelViewSet):

@@ -17,7 +17,6 @@ import {
   Share2,
   Tag,
   Star,
-  User as UserIcon,
   MessageSquare,
   AlertCircle,
   Copy,
@@ -25,9 +24,11 @@ import {
   Linkedin
 } from 'lucide-react';
 import { useCourses } from '../../context/CourseContext';
-import { useCart } from '../../context/CartContext';
+import { CartAuthError, useCart } from '../../context/CartContext';
+import { apiErrorMessage } from '../../api/client';
 import { useWishlist } from '../../context/WishlistContext';
 import { useLearning } from '../../context/LearningContext';
+import { orderService } from '../../api/orderService';
 import { useNotifications } from '../../context/NotificationContext';
 import { useAuth } from '../../context/AuthContext';
 import { Rating } from '../../components/ui/Rating';
@@ -35,7 +36,9 @@ import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
 import { Accordion } from '../../components/ui/Accordion';
 import { Breadcrumbs } from '../../components/ui/Breadcrumbs';
+import { Avatar } from '../../components/ui/Avatar';
 import { CourseCard } from '../../components/ui/CourseCard';
+import { CourseCover } from '../../components/courses/CourseCover';
 import { Modal } from '../../components/ui/Modal';
 
 export const CourseDetailPage: React.FC = () => {
@@ -45,10 +48,11 @@ export const CourseDetailPage: React.FC = () => {
   const { courses, getCourseBySlug, fetchCourseBySlug, reviews, qaQuestions } = useCourses();
   const { addToCart, isInCart, applyCoupon } = useCart();
   const { toggleWishlist, isInWishlist } = useWishlist();
-  const { isEnrolled } = useLearning();
+  const { isEnrolled, refreshLearning } = useLearning();
   const { showToast } = useNotifications();
 
   const [couponCode, setCouponCode] = useState('');
+  const [registering, setRegistering] = useState(false);
   const [couponMessage, setCouponMessage] = useState<{ success?: boolean; text?: string } | null>(null);
   const [previewModalOpen, setPreviewModalOpen] = useState(false);
   const [selectedPreviewVideo, setSelectedPreviewVideo] = useState<string | null>(null);
@@ -106,13 +110,17 @@ export const CourseDetailPage: React.FC = () => {
     name: (course as any).instructorName || (course as any).author || 'Prajnadhara Faculty',
     title: (course as any).instructorTitle || 'Course Instructor',
     bio: (course as any).instructorBio || 'Subject matter expert and industry practitioner.',
-    avatar: (course as any).instructorAvatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80',
-    rating: course.rating || 4.9,
-    studentsCount: course.studentsCount || 100,
-    reviewsCount: course.ratingCount || 20
+    avatar: (course as any).instructorAvatar || '',
+    rating: course.rating || 0,
+    studentsCount: course.studentCount || 0,
+    reviewsCount: course.reviewsCount || 0
   };
   const instructorName = instructor?.name || 'Prajnadhara Instructor';
+  const teachingTeam = (course.instructors && course.instructors.length > 0)
+    ? course.instructors
+    : [{ id: String(course.instructorId || ''), name: instructorName, title: instructor?.title || '' }];
   const enrolled = isEnrolled(course.id);
+  const isFreeCourse = Boolean(course.isFree) || Number(course.price) === 0;
   const inCart = isInCart(course.id);
   const wishlisted = isInWishlist(course.id);
 
@@ -120,11 +128,19 @@ export const CourseDetailPage: React.FC = () => {
   const courseBadges = Array.isArray(course.badges) ? course.badges : [];
   const whatYouWillLearn = Array.isArray(course.whatYouWillLearn) ? course.whatYouWillLearn : [];
   const requirements = Array.isArray(course.requirements) ? course.requirements : [];
+  const targetAudience = Array.isArray(course.targetAudience) ? course.targetAudience : [];
+  const keyFeatures = Array.isArray(course.settings?.keyFeatures) ? course.settings.keyFeatures : [];
+  const faqs = Array.isArray(course.settings?.faqs) ? course.settings.faqs : [];
+  const lengthLabel = (course.durationHours || 0) > 0
+    ? `${course.durationHours} hours`
+    : (course.durationWeeks || 0) > 0
+      ? `${course.durationWeeks} weeks`
+      : '';
 
   const courseReviews = reviews.filter(r => r.courseId === course.id);
   const courseQA = qaQuestions.filter(q => q.courseId === course.id);
   const relatedCourses = courses
-    .filter(c => c.categoryId === course.categoryId && c.id !== course.id && c.status === 'published')
+    .filter(c => String(c.categoryId) === String(course.categoryId) && String(c.id) !== String(course.id) && c.status === 'published')
     .slice(0, 3);
 
   // Rating distribution
@@ -143,12 +159,62 @@ export const CourseDetailPage: React.FC = () => {
     setCouponMessage({ success: res.success, text: res.message });
   };
 
-  const handleBuyNow = () => {
-    if (!inCart) addToCart(course.id);
+  const handleAddToCart = async () => {
+    if (inCart) {
+      navigate('/cart');
+      return;
+    }
+    try {
+      await addToCart(course.id);
+      showToast('success', `Added "${course.title}" to your cart.`);
+    } catch (err) {
+      if (err instanceof CartAuthError) {
+        navigate(`/signin?redirect=${encodeURIComponent(`/course/${course.slug}`)}`);
+        return;
+      }
+      showToast('error', apiErrorMessage(err, 'Could not add this course to the cart.'));
+    }
+  };
+
+  const handleRegisterFree = async () => {
     if (!currentUser) {
-      navigate('/signin?redirect=/checkout');
-    } else {
+      navigate(`/signin?redirect=${encodeURIComponent(`/course/${course.slug}`)}`);
+      return;
+    }
+    setRegistering(true);
+    try {
+      const result = await orderService.initiateToucanPayment({
+        courseIds: [String(course.id)],
+        name: currentUser.name,
+        email: currentUser.email,
+      });
+      if ((result as { free?: boolean }).free) {
+        await refreshLearning();
+        navigate(`/student/course/${course.id}`);
+        return;
+      }
+      showToast('error', 'This course could not be registered.');
+    } catch (err) {
+      showToast('error', apiErrorMessage(err, 'Could not register for this course.'));
+    } finally {
+      setRegistering(false);
+    }
+  };
+
+  const handleBuyNow = async () => {
+    try {
+      if (!inCart) await addToCart(course.id);
+      if (!currentUser) {
+        navigate('/signin?redirect=/checkout');
+        return;
+      }
       navigate('/checkout');
+    } catch (err) {
+      if (err instanceof CartAuthError) {
+        navigate('/signin?redirect=/checkout');
+        return;
+      }
+      showToast('error', apiErrorMessage(err, 'Could not start checkout for this course.'));
     }
   };
 
@@ -169,6 +235,9 @@ export const CourseDetailPage: React.FC = () => {
       ),
       content: (
         <div className="divide-y divide-slate-100">
+          {lectures.length === 0 && (
+            <p className="py-2.5 text-xs text-slate-500">Covered in live classes.</p>
+          )}
           {lectures.map((lecture: any, lIdx: number) => (
             <div key={lecture.id || `lec-${lIdx}`} className="py-2.5 flex items-center justify-between text-xs text-slate-700">
               <div className="flex items-center gap-2.5">
@@ -191,9 +260,11 @@ export const CourseDetailPage: React.FC = () => {
                     Preview
                   </button>
                 )}
-                <span className="text-slate-400 tabular-nums text-[11px]">
-                  {lecture.durationMinutes || 0}m
-                </span>
+                {(lecture.durationMinutes || 0) > 0 && (
+                  <span className="text-slate-400 tabular-nums text-[11px]">
+                    {lecture.durationMinutes}m
+                  </span>
+                )}
               </div>
             </div>
           ))}
@@ -251,7 +322,12 @@ export const CourseDetailPage: React.FC = () => {
                 <span aria-hidden="true" className="text-slate-600 hidden sm:inline">·</span>
                 <span className="tabular-nums">{(course.studentCount || (course as any).studentsCount || 0).toLocaleString('en-IN')} students enrolled</span>
                 <span aria-hidden="true" className="text-slate-600 hidden sm:inline">·</span>
-                <span>Created by <Link to={`/instructor/${course.instructorId}`} className="text-emerald-400 hover:underline font-semibold">{instructorName}</Link></span>
+                <span>Created by {teachingTeam.map((person, index) => (
+                  <React.Fragment key={person.id || person.name}>
+                    {index > 0 ? ', ' : ''}
+                    <Link to={`/instructor/${person.id}`} className="text-emerald-400 hover:underline font-semibold">{person.name}</Link>
+                  </React.Fragment>
+                ))}</span>
               </div>
 
               <div className="mt-3 flex items-center gap-x-4 gap-y-2 flex-wrap text-xs text-slate-400">
@@ -301,7 +377,7 @@ export const CourseDetailPage: React.FC = () => {
                     Course Curriculum
                   </h2>
                   <p className="text-xs text-slate-500 mt-0.5">
-                    {courseCurriculum.length} sections · {course.lectureCount || 0} lectures · {course.durationHours || 0} hours total length
+                    {courseCurriculum.length} sections · {course.lectureCount || 0} lectures{lengthLabel ? ` · ${lengthLabel}` : ''}
                   </p>
                 </div>
               </div>
@@ -321,6 +397,42 @@ export const CourseDetailPage: React.FC = () => {
               </ul>
             </div>
 
+            {targetAudience.length > 0 && (
+              <div>
+                <h2 className="text-lg font-bold font-display text-slate-900 mb-3">Who this is for</h2>
+                <ul className="list-disc list-inside space-y-1.5 text-xs text-slate-700">
+                  {targetAudience.map((item: string, i: number) => (
+                    <li key={i} className="leading-relaxed">{item}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {keyFeatures.length > 0 && (
+              <div>
+                <h2 className="text-lg font-bold font-display text-slate-900 mb-3">Key features</h2>
+                <ul className="list-disc list-inside space-y-1.5 text-xs text-slate-700">
+                  {keyFeatures.map((item: string, i: number) => (
+                    <li key={i} className="leading-relaxed">{item}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {faqs.length > 0 && (
+              <div>
+                <h2 className="text-lg font-bold font-display text-slate-900 mb-3">Frequently asked questions</h2>
+                <div className="space-y-3">
+                  {faqs.map((item: { question?: string; answer?: string }, i: number) => (
+                    <div key={i}>
+                      <p className="text-xs font-bold text-slate-900">{item.question}</p>
+                      <p className="text-xs text-slate-700 mt-1 leading-relaxed">{item.answer}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* Detailed Description */}
             <div className="prose prose-sm max-w-none text-xs text-slate-700 leading-relaxed space-y-3">
               <h2 className="text-lg font-bold font-display text-slate-900 not-prose mb-3">
@@ -330,25 +442,22 @@ export const CourseDetailPage: React.FC = () => {
             </div>
 
             {/* Instructor Profile Card */}
-            <div className="p-6 border border-slate-200 rounded bg-slate-50">
-              <div className="text-xs font-bold uppercase tracking-wider text-emerald-800 mb-2">
-                Lead Instructor
+            <div className="p-6 border border-slate-200 rounded bg-slate-50 space-y-5">
+              <div className="text-xs font-bold uppercase tracking-wider text-emerald-800">
+                {teachingTeam.length > 1 ? 'Instructors' : 'Lead Instructor'}
               </div>
-              <div className="flex items-start gap-4">
-                <img
-                  src={instructor?.avatar}
-                  alt={instructorName}
-                  className="w-16 h-16 rounded object-cover border border-slate-200"
-                />
+              {teachingTeam.map((person, index) => (
+              <div key={person.id || person.name} className="flex items-start gap-4">
+                <Avatar name={person.name} size="lg" />
                 <div>
                   <Link
-                    to={`/instructor/${course.instructorId}`}
+                    to={`/instructor/${person.id}`}
                     className="text-base font-bold text-slate-900 hover:text-emerald-900"
                   >
-                    {instructorName}
+                    {person.name}
                   </Link>
-                  <p className="text-xs text-slate-600 mt-0.5">{instructor?.title}</p>
-
+                  <p className="text-xs text-slate-600 mt-0.5">{person.title || (index === 0 ? instructor?.title : '')}</p>
+                  {index === 0 && (
                   <div className="mt-3 flex items-center gap-4 text-xs text-slate-500 flex-wrap">
                     <span className="inline-flex items-center gap-1">
                       <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-400" />
@@ -359,11 +468,15 @@ export const CourseDetailPage: React.FC = () => {
                     <span aria-hidden="true">·</span>
                     <span className="tabular-nums"><strong>{instructor?.reviewsCount?.toLocaleString('en-IN') || '3,000+'}</strong> Reviews</span>
                   </div>
+                  )}
                 </div>
               </div>
-              <p className="mt-4 text-xs text-slate-700 leading-relaxed border-t border-slate-200/80 pt-3">
-                {instructor?.bio}
+              ))}
+              {instructor?.bio ? (
+              <p className="text-xs text-slate-700 leading-relaxed border-t border-slate-200/80 pt-3">
+                {instructor.bio}
               </p>
+              ) : null}
             </div>
 
             {/* Reviews Section & Rating Distribution */}
@@ -426,11 +539,7 @@ export const CourseDetailPage: React.FC = () => {
                   <div key={rev.id} className="p-4 border border-slate-200 rounded bg-white">
                     <div className="flex items-center justify-between mb-2">
                       <div className="flex items-center gap-2.5">
-                        <img
-                          src={rev.userAvatar}
-                          alt={rev.userName}
-                          className="w-7 h-7 rounded object-cover border border-slate-200"
-                        />
+                        <Avatar name={rev.userName} size="sm" />
                         <span className="font-semibold text-xs text-slate-900">{rev.userName}</span>
                       </div>
                       <div className="flex items-center gap-2">
@@ -498,7 +607,7 @@ export const CourseDetailPage: React.FC = () => {
                 </h2>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   {relatedCourses.map((c) => (
-                    <CourseCard key={c.id} course={c} showHoverPopover={false} />
+                    <CourseCard key={c.id} course={c} />
                   ))}
                 </div>
               </div>
@@ -510,10 +619,11 @@ export const CourseDetailPage: React.FC = () => {
             <div className="border border-slate-200 rounded bg-white shadow-sm overflow-hidden">
               {/* Preview Image / Video Banner */}
               <div className="relative aspect-video bg-slate-900 overflow-hidden group cursor-pointer" onClick={() => setPreviewModalOpen(true)}>
-                <img
-                  src={course.thumbnail || 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=800&auto=format&fit=crop&q=80'}
-                  alt={course.title}
-                  className="w-full h-full object-cover"
+                <CourseCover
+                  title={course.title}
+                  category={course.subcategory}
+                  categoryId={course.categoryId}
+                  thumbnail={course.thumbnail}
                 />
                 <div className="absolute inset-0 bg-black/40 flex flex-col items-center justify-center text-white group-hover:bg-black/50 transition-colors">
                   <PlayCircle className="w-12 h-12 mb-1" />
@@ -525,14 +635,14 @@ export const CourseDetailPage: React.FC = () => {
               <div className="p-6">
                 <div className="flex items-baseline gap-3 mb-4">
                   <span className="text-3xl font-bold font-display text-slate-950 tabular-nums">
-                    {course.isFree || !course.price ? 'Free' : `₹${Number(course.price).toLocaleString('en-IN')}`}
+                    {isFreeCourse ? 'Free' : `₹${Number(course.price).toLocaleString('en-IN')}`}
                   </span>
-                  {course.originalPrice && course.price && course.originalPrice > course.price && !course.isFree && (
+                  {!isFreeCourse && course.originalPrice && course.price && course.originalPrice > course.price && (
                     <span className="text-sm text-slate-400 line-through tabular-nums">
                       ₹{Number(course.originalPrice).toLocaleString('en-IN')}
                     </span>
                   )}
-                  {course.originalPrice && course.price && course.originalPrice > course.price && !course.isFree && (
+                  {!isFreeCourse && course.originalPrice && course.price && course.originalPrice > course.price && (
                     <span className="text-xs font-bold text-emerald-800 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded">
                       {Math.round(((course.originalPrice - course.price) / course.originalPrice) * 100)}% OFF
                     </span>
@@ -552,37 +662,45 @@ export const CourseDetailPage: React.FC = () => {
                   </div>
                 ) : (
                   <div className="space-y-2.5">
-                    <Button
-                      variant="primary"
-                      size="lg"
-                      className="w-full"
-                      onClick={handleBuyNow}
-                    >
-                      Buy Now (Lifetime Access)
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="md"
-                      className="w-full"
-                      onClick={() => {
-                        if (inCart) {
-                          navigate('/cart');
-                        } else {
-                          addToCart(course.id);
-                          showToast('success', `Added "${course.title}" to your cart!`);
-                        }
-                      }}
-                    >
-                      {inCart ? 'View in Cart' : 'Add to Cart'}
-                    </Button>
+                    {isFreeCourse ? (
+                      <Button
+                        variant="primary"
+                        size="lg"
+                        className="w-full"
+                        disabled={registering}
+                        onClick={handleRegisterFree}
+                      >
+                        {registering ? 'Registering...' : 'Register for free'}
+                      </Button>
+                    ) : (
+                      <>
+                        <Button
+                          variant="primary"
+                          size="lg"
+                          className="w-full"
+                          onClick={handleBuyNow}
+                        >
+                          Buy Now (Lifetime Access)
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="md"
+                          className="w-full"
+                          onClick={handleAddToCart}
+                        >
+                          {inCart ? 'View in Cart' : 'Add to Cart'}
+                        </Button>
+                      </>
+                    )}
                   </div>
                 )}
 
-                {/* 30-Day Guarantee Notice */}
+                {!isFreeCourse && (
                 <div className="mt-4 pt-4 border-t border-slate-100 flex items-center justify-center gap-2 text-xs text-slate-600 font-medium">
                   <ShieldCheck className="w-4 h-4 text-emerald-800" />
                   <span>30-Day Money-Back Guarantee</span>
                 </div>
+                )}
 
                 {/* Course Inclusions List */}
                 <div className="mt-5 space-y-2 text-xs text-slate-600">
@@ -611,7 +729,7 @@ export const CourseDetailPage: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Coupon Code Input */}
+                {!isFreeCourse && (
                 <div className="mt-5 pt-4 border-t border-slate-100">
                   <form onSubmit={handleApplyCoupon} className="flex gap-2">
                     <input
@@ -631,6 +749,7 @@ export const CourseDetailPage: React.FC = () => {
                     </p>
                   )}
                 </div>
+                )}
 
                 {/* Wishlist & Share buttons */}
                 <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-600">
@@ -688,10 +807,11 @@ export const CourseDetailPage: React.FC = () => {
             size="sm"
             onClick={() => {
               setPreviewModalOpen(false);
-              handleBuyNow();
+              if (isFreeCourse) handleRegisterFree();
+              else handleBuyNow();
             }}
           >
-            Enroll in Masterclass &rarr;
+            {isFreeCourse ? 'Register for free' : 'Enroll in Masterclass'}
           </Button>
         </div>
       </Modal>

@@ -45,7 +45,7 @@ export const AdminBlogManagementPage: React.FC = () => {
     coverImage: '',
     authorName: 'Prajnadhara Faculty',
     authorRole: 'Lead Technical Architect',
-    authorAvatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200',
+    authorAvatar: '',
     readTime: '5 min read',
     isPublished: true,
     featured: false
@@ -75,10 +75,10 @@ export const AdminBlogManagementPage: React.FC = () => {
       category: 'Technology',
       excerpt: '',
       content: '',
-      coverImage: 'https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=1000',
+      coverImage: '',
       authorName: 'Prajnadhara Faculty',
       authorRole: 'Lead Technical Architect',
-      authorAvatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200',
+      authorAvatar: '',
       readTime: '5 min read',
       isPublished: true,
       featured: false
@@ -97,7 +97,7 @@ export const AdminBlogManagementPage: React.FC = () => {
       coverImage: p.coverImage || '',
       authorName: p.authorName,
       authorRole: p.authorRole || '',
-      authorAvatar: p.authorAvatar || '',
+      authorAvatar: '',
       readTime: p.readTime,
       isPublished: p.isPublished,
       featured: p.featured

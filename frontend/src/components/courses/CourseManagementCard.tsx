@@ -17,6 +17,7 @@ import {
   Sparkles
 } from 'lucide-react';
 import { Course } from '../../types';
+import { CourseCover } from './CourseCover';
 
 interface CourseManagementCardProps {
   course: Course;
@@ -26,6 +27,7 @@ interface CourseManagementCardProps {
   onDelete?: (course: Course) => void;
   onPublishToggle?: (course: Course) => void;
   onDuplicate?: (course: Course) => void;
+  onHomepageToggle?: (course: Course) => void;
   editUrl?: string;
 }
 
@@ -37,6 +39,7 @@ export const CourseManagementCard: React.FC<CourseManagementCardProps> = ({
   onDelete,
   onPublishToggle,
   onDuplicate,
+  onHomepageToggle,
   editUrl,
 }) => {
   const navigate = useNavigate();
@@ -55,7 +58,7 @@ export const CourseManagementCard: React.FC<CourseManagementCardProps> = ({
   }, []);
 
   const instructorDisplay = authorName || course.instructor?.name || 'admin';
-  const categoryDisplay = categoryName || course.subcategory || 'Artificial Intelligence';
+  const categoryDisplay = categoryName || course.subcategory || 'Uncategorised';
 
   // Format currency
   const formatINR = (amount: number) => {
@@ -66,7 +69,11 @@ export const CourseManagementCard: React.FC<CourseManagementCardProps> = ({
     }).format(amount);
   };
 
-  const durationWeeks = course.durationWeeks || (course.durationHours > 0 ? Math.max(1, Math.round(course.durationHours / 4)) : 10);
+  const durationLabel = (course.durationWeeks || 0) > 0
+    ? `${course.durationWeeks} Weeks`
+    : (course.durationHours || 0) > 0
+      ? `${course.durationHours} Hours`
+      : '—';
   const quizzesCount = course.settings?.quizCount ?? 0;
 
   const targetEditUrl = editUrl || `/instructor/courses/${course.id}/edit`;
@@ -75,14 +82,12 @@ export const CourseManagementCard: React.FC<CourseManagementCardProps> = ({
     <div className="group relative bg-white border border-slate-200/90 rounded-2xl p-4 sm:p-5 shadow-sm hover:shadow-md hover:border-purple-200 transition-all duration-200 flex flex-col md:flex-row gap-5 items-stretch text-left">
       {/* Thumbnail Container */}
       <div className="relative w-full md:w-64 lg:w-72 aspect-[16/10] sm:aspect-[16/9] md:aspect-[16/10] rounded-xl overflow-hidden bg-slate-900 border border-slate-100 shrink-0">
-        <img
-          src={course.thumbnail || 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=800'}
-          alt={course.title}
-          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-          loading="lazy"
-          onError={(e) => {
-            (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=800';
-          }}
+        <CourseCover
+          title={course.title}
+          category={categoryDisplay}
+          categoryId={course.categoryId}
+          thumbnail={course.thumbnail}
+          className="transition-transform duration-300 group-hover:scale-105"
         />
         {course.featured && (
           <div className="absolute top-2.5 left-2.5 px-2.5 py-1 rounded-full bg-gradient-to-r from-amber-500 to-orange-500 text-white text-[11px] font-bold tracking-wide flex items-center gap-1 shadow-md">
@@ -203,10 +208,21 @@ export const CourseManagementCard: React.FC<CourseManagementCardProps> = ({
           </div>
 
           {/* Metadata Chips: Duration, Level, Lessons, Quizzes, Students */}
+          {onHomepageToggle && (
+            <label className="mt-3 flex items-center gap-2 text-xs text-slate-700 w-fit">
+              <input
+                type="checkbox"
+                checked={Boolean(course.featured)}
+                onChange={() => onHomepageToggle(course)}
+              />
+              Show on the homepage
+            </label>
+          )}
+
           <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-slate-600">
             <span className="inline-flex items-center gap-1.5 bg-slate-50 px-2 py-1 rounded-md border border-slate-150">
               <Clock className="w-3.5 h-3.5 text-indigo-500" />
-              <span>{durationWeeks} Weeks</span>
+              <span>{durationLabel}</span>
             </span>
 
             <span className="inline-flex items-center gap-1.5 bg-slate-50 px-2 py-1 rounded-md border border-slate-150">

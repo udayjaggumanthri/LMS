@@ -77,3 +77,13 @@ class BlogPostSerializer(serializers.ModelSerializer):
             'readTime', 'viewsCount', 'isPublished', 'featured',
             'publishedAt', 'createdAt', 'updatedAt'
         ]
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        data['authorAvatar'] = ''
+        return data
+
+    def validate(self, attrs):
+        attrs = super().validate(attrs)
+        attrs['author_avatar'] = ''
+        return attrs

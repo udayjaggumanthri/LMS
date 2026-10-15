@@ -42,7 +42,7 @@ class Command(BaseCommand):
                 'is_superuser': True,
                 'is_approved_instructor': True,
                 'title': 'Platform Administrator & Lead Architect',
-                'avatar': 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=300'
+                'avatar': ''
             }
         )
         uday_user.email = 'udayjaggumanthri@gmail.com'
@@ -59,7 +59,7 @@ class Command(BaseCommand):
                 'is_staff': True,
                 'is_superuser': True,
                 'title': 'Academic Registrar & Platform Administrator',
-                'avatar': 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=300'
+                'avatar': ''
             }
         )
         admin_user.set_password('AdminPass123!')
@@ -75,7 +75,7 @@ class Command(BaseCommand):
                 'is_approved_instructor': True,
                 'title': 'Principal Distributed Systems Engineer & Ex-Staff Architect',
                 'bio': '15+ years architecting fault-tolerant backend infrastructures serving 100M+ DAUs. Author of "Reliable Distributed Systems".',
-                'avatar': 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300',
+                'avatar': '',
                 'rating': 4.9,
                 'reviews_count': 3840,
                 'students_count': 42100,
@@ -96,7 +96,7 @@ class Command(BaseCommand):
                 'is_approved_instructor': True,
                 'title': 'Lead Product Designer & Design Systems Specialist',
                 'bio': 'Built enterprise design token architectures for fintech platforms. Obsessed with accessibility and micro-interactions.',
-                'avatar': 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=300',
+                'avatar': '',
                 'rating': 4.85,
                 'reviews_count': 1920,
                 'students_count': 18500,
@@ -115,7 +115,7 @@ class Command(BaseCommand):
                 'role': UserRole.STUDENT,
                 'title': 'Associate Backend Engineer',
                 'bio': 'Passionate about Go, Kubernetes, and distributed architectures.',
-                'avatar': 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=200'
+                'avatar': ''
             }
         )
         student_user.set_password('StudentPass123!')

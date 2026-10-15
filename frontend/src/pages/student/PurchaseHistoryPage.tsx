@@ -1,14 +1,25 @@
 import React, { useState } from 'react';
 import { useLearning } from '../../context/LearningContext';
+import { orderService } from '../../api/orderService';
 import { Button } from '../../components/ui/Button';
-import { Modal } from '../../components/ui/Modal';
+import { TaxInvoiceModal } from '../../components/orders/TaxInvoiceSheet';
 import { Table, Column } from '../../components/ui/Table';
 import { Order } from '../../types';
-import { FileText, Printer, CheckCircle2 } from 'lucide-react';
+import { FileText, CheckCircle2 } from 'lucide-react';
+
+const STATUS_LABEL: Record<string, string> = {
+  completed: 'Paid',
+  pending: 'Pending',
+  failed: 'Failed',
+  cancelled: 'Cancelled',
+  refunded: 'Refunded',
+};
 
 export const PurchaseHistoryPage: React.FC = () => {
-  const { orders } = useLearning();
+  const { orders, addOrder, refreshLearning } = useLearning();
   const [selectedOrderForInvoice, setSelectedOrderForInvoice] = useState<Order | null>(null);
+  const [checkingId, setCheckingId] = useState<string | number | null>(null);
+  const [checkNote, setCheckNote] = useState('');
 
   const columns: Column<Order>[] = [
     {
@@ -37,12 +48,31 @@ export const PurchaseHistoryPage: React.FC = () => {
     },
     {
       key: 'total',
-      header: 'Total Paid',
+      header: 'Amount',
       align: 'right',
       render: (o) => (
         <span className="font-bold text-slate-900 tabular-nums">
-          ₹{o.total.toLocaleString('en-IN')}
+          ₹{Number(o.total || 0).toLocaleString('en-IN')}
         </span>
+      )
+    },
+    {
+      key: 'status',
+      header: 'Status',
+      render: (o) => (
+        <div>
+          <span className={`px-2 py-0.5 rounded text-[11px] font-semibold border inline-flex items-center gap-1 ${
+            o.status === 'completed'
+              ? 'bg-emerald-100 text-emerald-800 border-emerald-300'
+              : 'bg-slate-100 text-slate-700 border-slate-200'
+          }`}>
+            {o.status === 'completed' && <CheckCircle2 className="w-3 h-3" />}
+            {STATUS_LABEL[o.status] || o.status}
+          </span>
+          {o.status !== 'completed' && o.status !== 'refunded' && (
+            <div className="text-[10px] text-slate-500 mt-1">Course not unlocked yet</div>
+          )}
+        </div>
       )
     },
     {
@@ -55,14 +85,43 @@ export const PurchaseHistoryPage: React.FC = () => {
       header: 'Invoice',
       align: 'right',
       render: (o) => (
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => setSelectedOrderForInvoice(o)}
-          leftIcon={<FileText className="w-3.5 h-3.5" />}
-        >
-          Invoice
-        </Button>
+        <div className="flex justify-end gap-2">
+          {o.status === 'completed' ? (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setSelectedOrderForInvoice(o)}
+              leftIcon={<FileText className="w-3.5 h-3.5" />}
+            >
+              Invoice
+            </Button>
+          ) : null}
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={checkingId === o.id}
+            onClick={async () => {
+              setCheckingId(o.id);
+              setCheckNote('');
+              try {
+                const result = await orderService.verifyToucanPayment({ orderId: o.id });
+                if (result.success && result.order) {
+                  addOrder(result.order);
+                  refreshLearning();
+                  setCheckNote('Toucan confirmed this payment.');
+                } else {
+                  setCheckNote('Toucan has not confirmed this payment.');
+                }
+              } catch (err: any) {
+                setCheckNote(err?.response?.data?.error || 'Toucan has not confirmed this payment.');
+              } finally {
+                setCheckingId(null);
+              }
+            }}
+          >
+            {checkingId === o.id ? 'Checking…' : 'Check with Toucan'}
+          </Button>
+        </div>
       )
     }
   ];
@@ -78,6 +137,7 @@ export const PurchaseHistoryPage: React.FC = () => {
         </p>
       </div>
 
+      {checkNote ? <p className="text-xs text-slate-600">{checkNote}</p> : null}
       <Table
         columns={columns}
         data={orders}
@@ -85,79 +145,10 @@ export const PurchaseHistoryPage: React.FC = () => {
         pageSize={10}
       />
 
-      {/* Invoice Modal */}
-      {selectedOrderForInvoice && (
-        <Modal
-          isOpen={!!selectedOrderForInvoice}
-          onClose={() => setSelectedOrderForInvoice(null)}
-          title={`Official Invoice ${selectedOrderForInvoice.invoiceNumber}`}
-          size="md"
-        >
-          <div className="p-4 border border-slate-200 rounded text-xs space-y-4 bg-white">
-            <div className="flex justify-between items-center pb-3 border-b border-slate-100">
-              <div>
-                <h3 className="font-bold text-slate-900 text-sm">PrajnadharaEdu Tax Invoice</h3>
-                <p className="text-[11px] text-slate-500">GSTIN: 37AAECP1234F1Z5</p>
-              </div>
-              <div className="text-right">
-                <span className="px-2 py-0.5 rounded text-[11px] font-semibold bg-emerald-100 text-emerald-800 border border-emerald-300 inline-flex items-center gap-1">
-                  <CheckCircle2 className="w-3 h-3" /> Paid
-                </span>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4 border-b border-slate-100 pb-3">
-              <div>
-                <span className="text-slate-500 block text-[11px]">Invoice Reference:</span>
-                <span className="font-mono font-bold text-slate-900">{selectedOrderForInvoice.invoiceNumber}</span>
-                <span className="text-slate-500 block text-[11px] mt-1">Order ID:</span>
-                <span className="font-mono text-slate-700">{selectedOrderForInvoice.orderNumber}</span>
-              </div>
-              <div className="text-right">
-                <span className="text-slate-500 block text-[11px]">Issue Date:</span>
-                <span className="text-slate-800 font-medium">{selectedOrderForInvoice.createdAt}</span>
-                <span className="text-slate-500 block text-[11px] mt-1">Payment Method:</span>
-                <span className="uppercase text-slate-800 font-semibold">{selectedOrderForInvoice.paymentMethod}</span>
-              </div>
-            </div>
-
-            <div>
-              <h4 className="font-semibold text-slate-800 mb-2">Itemized Particulars</h4>
-              <div className="border border-slate-100 rounded overflow-hidden">
-                <table className="w-full text-left">
-                  <thead className="bg-slate-50 text-[11px] text-slate-500">
-                    <tr>
-                      <th className="p-2 font-medium">Course Description</th>
-                      <th className="p-2 text-right font-medium">Amount</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100">
-                    {selectedOrderForInvoice.items.map((it) => (
-                      <tr key={it.courseId}>
-                        <td className="p-2 font-medium text-slate-800">{it.courseTitle}</td>
-                        <td className="p-2 text-right font-mono text-slate-700">₹{it.price.toLocaleString('en-IN')}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-
-            <div className="pt-2 border-t border-slate-100 flex justify-between font-bold text-slate-900 text-sm">
-              <span>Grand Total:</span>
-              <span className="tabular-nums">₹{selectedOrderForInvoice.total.toLocaleString('en-IN')}</span>
-            </div>
-          </div>
-          <div className="mt-4 flex justify-end gap-2">
-            <Button variant="outline" size="sm" onClick={() => setSelectedOrderForInvoice(null)}>
-              Close
-            </Button>
-            <Button variant="primary" size="sm" onClick={() => window.print()} leftIcon={<Printer className="w-3.5 h-3.5" />}>
-              Print Invoice
-            </Button>
-          </div>
-        </Modal>
-      )}
+      <TaxInvoiceModal
+        orderId={selectedOrderForInvoice?.id ?? null}
+        onClose={() => setSelectedOrderForInvoice(null)}
+      />
     </div>
   );
 };

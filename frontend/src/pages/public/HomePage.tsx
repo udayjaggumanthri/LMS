@@ -24,7 +24,6 @@ import {
   GitMerge,
   Megaphone,
   Smartphone,
-  Star,
   Clock,
   Layers,
   FileCheck
@@ -32,16 +31,19 @@ import {
 import { Button } from '../../components/ui/Button';
 import { CourseCard } from '../../components/ui/CourseCard';
 import { Accordion } from '../../components/ui/Accordion';
+import { Avatar } from '../../components/ui/Avatar';
 import { useCourses } from '../../context/CourseContext';
 import { cmsService } from '../../api/cmsService';
+import { resolveMediaUrl } from '../../api/client';
 import { blogService, BlogPostItem } from '../../api/blogService';
 
-const HERO_IMAGE = '/src/assets/images/hero_learning_lifestyle_1791558511252.jpg';
+const HERO_IMAGE = '';
 
 export const HomePage: React.FC = () => {
   const navigate = useNavigate();
   const { courses, categories } = useCourses();
   const [heroSearch, setHeroSearch] = useState('');
+  const [heroImageFailed, setHeroImageFailed] = useState(false);
   const [articleCategory, setArticleCategory] = useState<string>('all');
   const [blogArticles, setBlogArticles] = useState<BlogPostItem[]>([]);
   const [blogsLoading, setBlogsLoading] = useState<boolean>(true);
@@ -69,8 +71,17 @@ export const HomePage: React.FC = () => {
           primaryBtnLink: hero.primaryBtnLink || prev.primaryBtnLink,
           secondaryBtnText: hero.secondaryBtnText || prev.secondaryBtnText,
           secondaryBtnLink: hero.secondaryBtnLink || prev.secondaryBtnLink,
-          mediaUrl: hero.mediaUrl || prev.mediaUrl
+          mediaUrl: resolveMediaUrl(hero.mediaUrl) || prev.mediaUrl
         }));
+      }
+      const faq = data?.sectionMap?.faq;
+      const items = faq?.jsonData?.items;
+      if (Array.isArray(items) && items.length) {
+        setFaqItems(items.map((item: { title?: string; content?: string }, index: number) => ({
+          id: `faq-${index + 1}`,
+          title: item.title || '',
+          content: item.content || '',
+        })));
       }
     }).catch(() => {});
 
@@ -105,35 +116,23 @@ export const HomePage: React.FC = () => {
     'cat-business': <Briefcase className="w-5 h-5 text-emerald-800" />
   };
 
-  // Specific 8 top categories as requested
-  const topCategories = [
-    { id: 'cat-ai', name: 'AI', slug: 'ai', count: 4, icon: <Cpu className="w-5 h-5 text-emerald-800" /> },
-    { id: 'cat-artificial-intelligence', name: 'Artificial Intelligence', slug: 'artificial-intelligence', count: 8, icon: <Sparkles className="w-5 h-5 text-emerald-800" /> },
-    { id: 'cat-cybersecurity', name: 'Cybersecurity', slug: 'cybersecurity', count: 2, icon: <Shield className="w-5 h-5 text-emerald-800" /> },
-    { id: 'cat-data-science', name: 'Data Science', slug: 'data-science', count: 3, icon: <BarChart3 className="w-5 h-5 text-emerald-800" /> },
-    { id: 'cat-database', name: 'Database', slug: 'database', count: 2, icon: <Database className="w-5 h-5 text-emerald-800" /> },
-    { id: 'cat-devops', name: 'DevOps', slug: 'devops', count: 2, icon: <GitMerge className="w-5 h-5 text-emerald-800" /> },
-    { id: 'cat-digital-marketing', name: 'Digital Marketing', slug: 'digital-marketing', count: 1, icon: <Megaphone className="w-5 h-5 text-emerald-800" /> },
-    { id: 'cat-mobile-app', name: 'Mobile App Development', slug: 'mobile-app-development', count: 1, icon: <Smartphone className="w-5 h-5 text-emerald-800" /> }
-  ];
-
-  // Top categories with dynamic fallback
-  const dynamicCategories = categories.length > 0 
-    ? categories.slice(0, 8).map(cat => ({
+  const topCategories = categories.filter((cat) => cat.isTop);
+  const dynamicCategories = topCategories.length > 0
+    ? topCategories.map(cat => ({
         id: cat.id,
         name: cat.name,
         slug: cat.slug,
         count: cat.courseCount || courses.filter(c => (c as any).categorySlug === cat.slug || c.categoryId === cat.id || (c as any).category === cat.name).length,
         icon: categoryIcons[cat.id] || categoryIcons[`cat-${cat.slug}`] || <BookOpen className="w-5 h-5 text-emerald-800" />
       }))
-    : topCategories;
+    : [];
 
   const filteredArticles =
     articleCategory === 'all'
       ? blogArticles
       : blogArticles.filter(a => a.category.toLowerCase() === articleCategory.toLowerCase());
 
-  const faqItems = [
+  const [faqItems, setFaqItems] = useState([
     {
       id: 'faq-1',
       title: 'How does PrajnadharaEdu differ from traditional institutes or universities?',
@@ -158,7 +157,7 @@ export const HomePage: React.FC = () => {
       content:
         'Yes. Experienced practitioners and instructors can apply to publish courses, set their own prices in INR, launch coupons, and earn revenue after a transparent platform commission.'
     }
-  ];
+  ]);
 
   return (
     <div className="w-full text-slate-900 bg-white">
@@ -205,7 +204,7 @@ export const HomePage: React.FC = () => {
                       type="text"
                       value={heroSearch}
                       onChange={(e) => setHeroSearch(e.target.value)}
-                      placeholder="Search courses (AI, Data, Web, Cloud)..."
+                      placeholder="Search courses..."
                       className="w-full pl-9 pr-2 py-2 text-xs sm:text-sm text-slate-900 bg-transparent placeholder-slate-400 focus:outline-none"
                     />
                   </div>
@@ -214,15 +213,14 @@ export const HomePage: React.FC = () => {
                   </Button>
                 </div>
 
-                {/* Popular searches tags */}
+                {topCategories.length > 0 && (
                 <div className="mt-2.5 flex items-center gap-1.5 text-[11px] sm:text-xs text-slate-500 overflow-x-auto no-scrollbar py-0.5">
                   <span className="font-semibold text-slate-700 shrink-0">Popular:</span>
-                  <Link to="/category/ai" className="shrink-0 px-2 py-0.5 rounded-full bg-slate-100 hover:bg-emerald-50 hover:text-emerald-800 transition-colors">AI</Link>
-                  <Link to="/category/artificial-intelligence" className="shrink-0 px-2 py-0.5 rounded-full bg-slate-100 hover:bg-emerald-50 hover:text-emerald-800 transition-colors">Artificial Intelligence</Link>
-                  <Link to="/category/data-science" className="shrink-0 px-2 py-0.5 rounded-full bg-slate-100 hover:bg-emerald-50 hover:text-emerald-800 transition-colors">Data Science</Link>
-                  <Link to="/category/devops" className="shrink-0 px-2 py-0.5 rounded-full bg-slate-100 hover:bg-emerald-50 hover:text-emerald-800 transition-colors">DevOps</Link>
-                  <Link to="/category/cybersecurity" className="shrink-0 px-2 py-0.5 rounded-full bg-slate-100 hover:bg-emerald-50 hover:text-emerald-800 transition-colors">Cybersecurity</Link>
+                  {topCategories.map((cat) => (
+                    <Link key={cat.id} to={`/category/${cat.slug}`} className="shrink-0 px-2 py-0.5 rounded-full bg-slate-100 hover:bg-emerald-50 hover:text-emerald-800 transition-colors">{cat.name}</Link>
+                  ))}
                 </div>
+                )}
               </form>
             </div>
 
@@ -230,17 +228,22 @@ export const HomePage: React.FC = () => {
             <div className="lg:col-span-5">
               <div className="border border-slate-200 rounded-xl overflow-hidden bg-slate-50 shadow-sm">
                 <div className="relative">
+                  {heroCMS.mediaUrl && !heroImageFailed ? (
                   <img
-                    src={heroCMS.mediaUrl || HERO_IMAGE}
-                    alt="PrajnadharaEdu student engaged in practical coding project"
-                    className="w-full aspect-[16/10] sm:aspect-[4/3] object-cover"
+                    src={resolveMediaUrl(heroCMS.mediaUrl)}
+                    alt=""
+                    className="w-full aspect-[16/10] sm:aspect-[4/3] object-cover bg-white"
                     loading="eager"
+                    onError={() => setHeroImageFailed(true)}
                   />
+                  ) : (
+                    <div className="w-full aspect-[16/10] sm:aspect-[4/3] bg-slate-100" />
+                  )}
                   <div className="p-3.5 sm:p-4 bg-white border-t border-slate-200 text-left">
                     <div className="flex items-center justify-between gap-2">
                       <div className="min-w-0">
                         <div className="text-xs font-bold text-slate-900 truncate">Practical Tech Masterclasses</div>
-                        <div className="text-[11px] text-slate-500 mt-0.5 truncate">33 Courses across AI, Cloud & Data</div>
+                        <div className="text-[11px] text-slate-500 mt-0.5 truncate">{courses.filter(c => c.status === 'published').length} published courses</div>
                       </div>
                       <Link to="/courses" className="shrink-0">
                         <Button variant="outline" size="sm">
@@ -278,7 +281,11 @@ export const HomePage: React.FC = () => {
           </div>
 
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-            {dynamicCategories.map((cat) => (
+            {dynamicCategories.length === 0 ? (
+              <div className="col-span-full p-8 bg-white border border-slate-200 rounded text-sm text-slate-600">
+                Published categories will appear here.
+              </div>
+            ) : dynamicCategories.map((cat) => (
               <Link
                 key={cat.id}
                 to={`/category/${cat.slug}`}
@@ -330,13 +337,13 @@ export const HomePage: React.FC = () => {
 
           {/* Real Courses Catalog Grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {courses.length > 0 ? (
-              courses.slice(0, 6).map((course) => (
+            {courses.filter(c => c.status === 'published' && c.featured).length > 0 ? (
+              courses.filter(c => c.status === 'published' && c.featured).map((course) => (
                 <CourseCard key={course.id} course={course} />
               ))
             ) : (
-              <div className="col-span-full text-center py-12 text-slate-500">
-                Loading courses from catalogue...
+              <div className="col-span-full p-8 bg-slate-50 border border-slate-200 rounded text-center text-sm text-slate-600">
+                Published courses will appear here.
               </div>
             )}
           </div>
@@ -418,114 +425,7 @@ export const HomePage: React.FC = () => {
         </div>
       </section>
 
-      {/* ---------------- 5. KEY METRICS STATS BAND ---------------- */}
-      <section className="py-12 bg-slate-900 text-white border-b border-slate-800">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6">
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6 text-center">
-            <div className="p-4 sm:p-6 bg-slate-800/40 rounded border border-slate-800">
-              <div className="text-2xl sm:text-3xl lg:text-4xl font-bold font-display text-white tabular-nums">
-                103 +
-              </div>
-              <div className="text-[11px] sm:text-xs font-medium text-slate-400 uppercase tracking-wider mt-1">
-                Active Students
-              </div>
-            </div>
-
-            <div className="p-4 sm:p-6 bg-slate-800/40 rounded border border-slate-800">
-              <div className="text-2xl sm:text-3xl lg:text-4xl font-bold font-display text-white tabular-nums">
-                33
-              </div>
-              <div className="text-[11px] sm:text-xs font-medium text-slate-400 uppercase tracking-wider mt-1">
-                Total Courses
-              </div>
-            </div>
-
-            <div className="p-4 sm:p-6 bg-slate-800/40 rounded border border-slate-800">
-              <div className="text-2xl sm:text-3xl lg:text-4xl font-bold font-display text-white tabular-nums">
-                11
-              </div>
-              <div className="text-[11px] sm:text-xs font-medium text-slate-400 uppercase tracking-wider mt-1">
-                Instructors
-              </div>
-            </div>
-
-            <div className="p-4 sm:p-6 bg-slate-800/40 rounded border border-slate-800">
-              <div className="text-2xl sm:text-3xl lg:text-4xl font-bold font-display text-white tabular-nums">
-                100 %
-              </div>
-              <div className="text-[11px] sm:text-xs font-medium text-slate-400 uppercase tracking-wider mt-1">
-                Satisfaction Rate
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ---------------- 6. STUDENT FEEDBACKS (TESTIMONIALS) ---------------- */}
-      <section className="py-16 bg-white border-b border-slate-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 text-left">
-          <div className="max-w-2xl mb-12">
-            <div className="text-xs font-bold uppercase tracking-wider text-emerald-800 mb-1">
-              Student Feedbacks
-            </div>
-            <h2 className="text-2xl sm:text-3xl font-bold font-display text-slate-900 tracking-tight">
-              Discover how our learners gained real-world skills, boosted confidence, and achieved their career goals through PrajnadharaEdu.
-            </h2>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            {/* Sneha Reddy */}
-            <div className="p-6 bg-slate-50 border border-slate-200 rounded flex flex-col justify-between">
-              <div>
-                <div className="flex items-center gap-1 text-amber-500 mb-4">
-                  {[...Array(5)].map((_, i) => (
-                    <Star key={i} className="w-4 h-4 fill-amber-400 text-amber-400" />
-                  ))}
-                </div>
-                <p className="text-sm text-slate-700 leading-relaxed italic">
-                  "PrajnadharaEdu helped me start my journey in web development from zero. The courses are very well structured and easy to follow. I was able to build my own website within a few weeks. Highly recommended for beginners!"
-                </p>
-              </div>
-
-              <div className="mt-6 pt-4 border-t border-slate-200 flex items-center gap-3">
-                <div className="w-10 h-10 rounded bg-emerald-800 text-white font-bold flex items-center justify-center text-sm">
-                  SR
-                </div>
-                <div>
-                  <div className="font-bold text-sm text-slate-900">Sneha Reddy</div>
-                  <div className="text-xs text-slate-500">Aspiring Web Developer</div>
-                </div>
-              </div>
-            </div>
-
-            {/* Rahul Kumar */}
-            <div className="p-6 bg-slate-50 border border-slate-200 rounded flex flex-col justify-between">
-              <div>
-                <div className="flex items-center gap-1 text-amber-500 mb-4">
-                  {[...Array(5)].map((_, i) => (
-                    <Star key={i} className="w-4 h-4 fill-amber-400 text-amber-400" />
-                  ))}
-                </div>
-                <p className="text-sm text-slate-700 leading-relaxed italic">
-                  "The Data Science course was amazing! The explanations were simple, and the practical examples made it easy to understand complex concepts. I feel confident working with data now. Thank you PrajnadharaEdu!"
-                </p>
-              </div>
-
-              <div className="mt-6 pt-4 border-t border-slate-200 flex items-center gap-3">
-                <div className="w-10 h-10 rounded bg-emerald-800 text-white font-bold flex items-center justify-center text-sm">
-                  RK
-                </div>
-                <div>
-                  <div className="font-bold text-sm text-slate-900">Rahul Kumar</div>
-                  <div className="text-xs text-slate-500">Data Science Student</div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ---------------- 7. LATEST ARTICLES ---------------- */}
+      {/* ---------------- 5. LATEST ARTICLES ---------------- */}
       <section className="py-16 bg-slate-50 border-b border-slate-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 text-left">
           <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-8">
@@ -548,7 +448,7 @@ export const HomePage: React.FC = () => {
 
           {/* Filter Bar */}
           <div className="flex items-center gap-2 mb-6 flex-wrap">
-            {['all', 'Technology', 'AI', 'DevOps', 'Mobile'].map((cat) => (
+            {['all', ...Array.from(new Set(blogArticles.map((a) => a.category).filter(Boolean)))].map((cat) => (
               <button
                 key={cat}
                 type="button"
@@ -621,13 +521,7 @@ export const HomePage: React.FC = () => {
 
                   <div className="px-5 py-3.5 bg-slate-50/70 border-t border-slate-100 flex items-center justify-between text-xs">
                     <div className="flex items-center gap-2">
-                      {art.authorAvatar ? (
-                        <img src={art.authorAvatar} alt={art.authorName} className="w-6 h-6 rounded-full object-cover" />
-                      ) : (
-                        <div className="w-6 h-6 rounded-full bg-emerald-800 text-white text-[10px] flex items-center justify-center font-bold">
-                          {art.authorName.charAt(0)}
-                        </div>
-                      )}
+                      <Avatar name={art.authorName} size="xs" />
                       <span className="font-medium text-slate-700 truncate max-w-[130px]">{art.authorName}</span>
                     </div>
                     <Link

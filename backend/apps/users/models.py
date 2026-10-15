@@ -9,7 +9,7 @@ class UserRole(models.TextChoices):
 
 class User(AbstractUser):
     role = models.CharField(max_length=20, choices=UserRole.choices, default=UserRole.STUDENT)
-    avatar = models.URLField(max_length=500, blank=True, default='https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200')
+    avatar = models.URLField(max_length=500, blank=True, default='')
     title = models.CharField(max_length=200, blank=True, default='')
     bio = models.TextField(blank=True, default='')
     payout_method = models.JSONField(default=dict, blank=True)

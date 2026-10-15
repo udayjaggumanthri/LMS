@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { useNavigate, useParams, Link } from 'react-router-dom';
+import { useNavigate, useParams, useLocation, useSearchParams, Link } from 'react-router-dom';
 import {
   BookOpen,
   Layers,
@@ -17,33 +17,27 @@ import {
   CheckCircle2,
   Clock,
   Sparkles,
-  Search,
   Tag,
   ArrowLeft,
   Save,
   Globe,
-  Lock,
-  ExternalLink,
   Award,
   Download,
-  AlertCircle,
   X,
-  Code,
-  Bold,
-  Italic,
-  Underline,
-  List,
-  ListOrdered,
-  Quote,
-  Link as LinkIcon,
-  Image as ImageIcon,
   DollarSign
 } from 'lucide-react';
 import { useCourses } from '../../context/CourseContext';
 import { useAuth } from '../../context/AuthContext';
 import { useNotifications } from '../../context/NotificationContext';
 import { MediaUploader } from '../common/MediaUploader';
+import { RichTextEditor } from '../common/RichTextEditor';
 import { Course, Section, Lecture, CourseLevel, CourseStatus } from '../../types';
+import { apiErrorMessage } from '../../api/client';
+import { courseService } from '../../api/courseService';
+import { adminService } from '../../api/adminService';
+import { courseFacultyIds } from '../../utils/courseFaculty';
+import { CourseCover } from './CourseCover';
+import { CourseAnnouncementsPanel } from './CourseAnnouncementsPanel';
 
 interface CourseBuilderProps {
   courseId?: string;
@@ -52,10 +46,12 @@ interface CourseBuilderProps {
 
 export const CourseBuilder: React.FC<CourseBuilderProps> = ({ courseId: propCourseId, onSaved }) => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const [searchParams] = useSearchParams();
   const { id: paramCourseId } = useParams<{ id: string }>();
   const courseId = propCourseId || paramCourseId;
 
-  const { courses, categories, addCourse, updateCourse, addCategory } = useCourses();
+  const { courses, categories, addCourse, updateCourse } = useCourses();
   const { currentUser } = useAuth();
   const { showToast } = useNotifications();
 
@@ -66,7 +62,9 @@ export const CourseBuilder: React.FC<CourseBuilderProps> = ({ courseId: propCour
   }, [courseId, courses]);
 
   // Main Builder Tab State
-  const [activeTab, setActiveTab] = useState<'overview' | 'curriculum' | 'settings'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'curriculum' | 'settings' | 'announcements'>(
+    searchParams.get('tab') === 'curriculum' ? 'curriculum' : searchParams.get('tab') === 'announcements' ? 'announcements' : 'overview'
+  );
   const [isSaving, setIsSaving] = useState(false);
 
   // --- OVERVIEW TAB STATE ---
@@ -77,45 +75,32 @@ export const CourseBuilder: React.FC<CourseBuilderProps> = ({ courseId: propCour
   const [status, setStatus] = useState<CourseStatus>('published');
   const [visibility, setVisibility] = useState<'public' | 'private' | 'password'>('public');
   const [publishedAt, setPublishedAt] = useState('');
-  const [thumbnail, setThumbnail] = useState('https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=800');
+  const [thumbnail, setThumbnail] = useState('');
   const [previewVideoUrl, setPreviewVideoUrl] = useState('');
   const [description, setDescription] = useState('');
-  const [descriptionTab, setDescriptionTab] = useState<'visual' | 'code'>('visual');
 
-  // Categories & Tags
   const [selectedCategoryIds, setSelectedCategoryIds] = useState<string[]>([]);
-  const [categorySearch, setCategorySearch] = useState('');
-  const [categoryFilterTab, setCategoryFilterTab] = useState<'all' | 'most_used'>('all');
-  const [isAddingNewCategory, setIsAddingNewCategory] = useState(false);
-  const [newCategoryName, setNewCategoryName] = useState('');
+  const [selectedInstructorIds, setSelectedInstructorIds] = useState<string[]>([]);
+  const [faculty, setFaculty] = useState<{ id: string; name: string; email: string; role: string }[]>([]);
+  const [instructorToAdd, setInstructorToAdd] = useState('');
 
   const [tags, setTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState('');
 
   // --- CURRICULUM TAB STATE ---
-  const [sections, setSections] = useState<Section[]>([
-    {
-      id: `sec-${Date.now()}-1`,
-      title: 'Foundations of the Subject',
-      lectures: [
-        { id: `lec-${Date.now()}-1`, title: 'Core Principles & Architecture Overview', durationMinutes: 15, type: 'video', previewFree: true },
-        { id: `lec-${Date.now()}-2`, title: 'Hands-on Environment Setup & Tooling', durationMinutes: 25, type: 'video' },
-      ]
-    }
-  ]);
+  const [sections, setSections] = useState<Section[]>([]);
+  const [curriculumReady, setCurriculumReady] = useState(!courseId);
   const [expandedSectionIds, setExpandedSectionIds] = useState<Record<string, boolean>>({});
   const [newSectionTitleInput, setNewSectionTitleInput] = useState('');
-
-  // Lecture Modal
-  const [lectureModalOpen, setLectureModalOpen] = useState(false);
-  const [activeLectureSectionId, setActiveLectureSectionId] = useState<string | null>(null);
-  const [editingLectureId, setEditingLectureId] = useState<string | null>(null);
-  const [modalLectureTitle, setModalLectureTitle] = useState('');
-  const [modalLectureDuration, setModalLectureDuration] = useState(15);
-  const [modalLectureType, setModalLectureType] = useState<'video' | 'article' | 'quiz' | 'resource'>('video');
-  const [modalLecturePreviewFree, setModalLecturePreviewFree] = useState(false);
-  const [modalLectureVideoUrl, setModalLectureVideoUrl] = useState('');
-  const [modalLectureContent, setModalLectureContent] = useState('');
+  const [lessonDraft, setLessonDraft] = useState<{
+    sectionIndex: number;
+    lectureIndex: number | null;
+    title: string;
+    type: Lecture['type'];
+    durationMinutes: number;
+    videoUrl: string;
+    content: string;
+  } | null>(null);
 
   // --- SETTINGS TAB STATE ---
   const [settingsSubTab, setSettingsSubTab] = useState<'general' | 'pricing' | 'extra' | 'assessment' | 'materials'>('general');
@@ -128,7 +113,6 @@ export const CourseBuilder: React.FC<CourseBuilderProps> = ({ courseId: propCour
   const [allowRepurchase, setAllowRepurchase] = useState(false);
   const [repurchaseAction, setRepurchaseAction] = useState<'reset' | 'keep'>('reset');
   const [level, setLevel] = useState<CourseLevel>('All Levels');
-  const [fakeStudentsEnrolled, setFakeStudentsEnrolled] = useState(0);
   const [maxStudents, setMaxStudents] = useState(0);
   const [retakeCourse, setRetakeCourse] = useState(0);
   const [finishButton, setFinishButton] = useState(true);
@@ -142,23 +126,13 @@ export const CourseBuilder: React.FC<CourseBuilderProps> = ({ courseId: propCour
   const [isFree, setIsFree] = useState(false);
 
   // Extra Information
-  const [whatYouWillLearn, setWhatYouWillLearn] = useState<string[]>([
-    'Design and deploy enterprise scalable applications',
-    'Understand production best practices and security hardening',
-    'Automate testing, CI/CD, and monitoring'
-  ]);
+  const [whatYouWillLearn, setWhatYouWillLearn] = useState<string[]>([]);
   const [newLearnInput, setNewLearnInput] = useState('');
 
-  const [requirements, setRequirements] = useState<string[]>([
-    'Basic programming understanding',
-    'A computer with internet access'
-  ]);
+  const [requirements, setRequirements] = useState<string[]>([]);
   const [newReqInput, setNewReqInput] = useState('');
 
-  const [targetAudience, setTargetAudience] = useState<string[]>([
-    'Software Developers and Tech Enthusiasts',
-    'System Architects and Engineers'
-  ]);
+  const [targetAudience, setTargetAudience] = useState<string[]>([]);
   const [newAudienceInput, setNewAudienceInput] = useState('');
 
   // Assessment Settings
@@ -194,6 +168,7 @@ export const CourseBuilder: React.FC<CourseBuilderProps> = ({ courseId: propCour
       if (existingCourse.categoryId) {
         setSelectedCategoryIds([String(existingCourse.categoryId)]);
       }
+      setSelectedInstructorIds(courseFacultyIds(existingCourse));
 
       if (existingCourse.durationWeeks) {
         setDurationNumber(existingCourse.durationWeeks);
@@ -216,7 +191,6 @@ export const CourseBuilder: React.FC<CourseBuilderProps> = ({ courseId: propCour
         if (s.blockAfterFinished !== undefined) setBlockAfterFinished(s.blockAfterFinished);
         if (s.allowRepurchase !== undefined) setAllowRepurchase(s.allowRepurchase);
         if (s.repurchaseAction) setRepurchaseAction(s.repurchaseAction);
-        if (s.fakeStudentsEnrolled) setFakeStudentsEnrolled(s.fakeStudentsEnrolled);
         if (s.maxStudents !== undefined) setMaxStudents(s.maxStudents);
         if (s.retakeCourse !== undefined) setRetakeCourse(s.retakeCourse);
         if (s.finishButton !== undefined) setFinishButton(s.finishButton);
@@ -236,6 +210,32 @@ export const CourseBuilder: React.FC<CourseBuilderProps> = ({ courseId: propCour
     }
   }, [existingCourse, categories]);
 
+  useEffect(() => {
+    if (!courseId) {
+      setCurriculumReady(true);
+      return;
+    }
+    let active = true;
+    setCurriculumReady(false);
+    courseService.getManagedCourse(courseId).then((loaded) => {
+      if (!active || !loaded) return;
+      if (loaded.description) setDescription(loaded.description);
+      if (loaded.previewVideoUrl) setPreviewVideoUrl(loaded.previewVideoUrl);
+      if (loaded.targetAudience?.length) setTargetAudience(loaded.targetAudience);
+      setFeatured(Boolean(loaded.featured));
+      setSections(loaded.curriculum || []);
+      if (loaded.curriculum && loaded.curriculum.length > 0) {
+        setExpandedSectionIds({ [loaded.curriculum[0].id]: true });
+      }
+      setCurriculumReady(true);
+    }).catch(() => {
+      if (active) setCurriculumReady(true);
+    });
+    return () => {
+      active = false;
+    };
+  }, [courseId]);
+
   // Auto-generate slug from title if not custom-edited
   useEffect(() => {
     if (!isEditingSlug && !existingCourse) {
@@ -251,37 +251,6 @@ export const CourseBuilder: React.FC<CourseBuilderProps> = ({ courseId: propCour
   const totalLecturesCount = useMemo(() => {
     return sections.reduce((acc, s) => acc + (s.lectures?.length || 0), 0);
   }, [sections]);
-
-  // Category Filtering
-  const filteredCategories = useMemo(() => {
-    return categories.filter(c => {
-      if (categorySearch && !c.name.toLowerCase().includes(categorySearch.toLowerCase())) {
-        return false;
-      }
-      return true;
-    });
-  }, [categories, categorySearch]);
-
-  const toggleCategory = (catId: string) => {
-    setSelectedCategoryIds(prev =>
-      prev.includes(catId) ? prev.filter(id => id !== catId) : [...prev, catId]
-    );
-  };
-
-  const handleAddNewCategory = () => {
-    if (!newCategoryName.trim()) return;
-    const newCat = {
-      name: newCategoryName.trim(),
-      slug: newCategoryName.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-'),
-      description: '',
-      subcategories: [],
-      iconName: 'Code',
-    };
-    addCategory(newCat);
-    setNewCategoryName('');
-    setIsAddingNewCategory(false);
-    showToast(`Category "${newCat.name}" added successfully.`, 'success');
-  };
 
   // Tag Management
   const handleAddTag = () => {
@@ -331,82 +300,6 @@ export const CourseBuilder: React.FC<CourseBuilderProps> = ({ courseId: propCour
 
   const handleCollapseAllSections = () => {
     setExpandedSectionIds({});
-  };
-
-  // Lecture Management
-  const openAddLectureModal = (sectionId: string) => {
-    setActiveLectureSectionId(sectionId);
-    setEditingLectureId(null);
-    setModalLectureTitle('');
-    setModalLectureDuration(15);
-    setModalLectureType('video');
-    setModalLecturePreviewFree(false);
-    setModalLectureVideoUrl('');
-    setModalLectureContent('');
-    setLectureModalOpen(true);
-  };
-
-  const openEditLectureModal = (sectionId: string, lecture: Lecture) => {
-    setActiveLectureSectionId(sectionId);
-    setEditingLectureId(lecture.id);
-    setModalLectureTitle(lecture.title);
-    setModalLectureDuration(lecture.durationMinutes || 15);
-    setModalLectureType(lecture.type || 'video');
-    setModalLecturePreviewFree(Boolean(lecture.previewFree));
-    setModalLectureVideoUrl(lecture.videoUrl || '');
-    setModalLectureContent(lecture.content || '');
-    setLectureModalOpen(true);
-  };
-
-  const handleSaveLecture = () => {
-    if (!modalLectureTitle.trim() || !activeLectureSectionId) {
-      showToast('Please provide a lesson title.', 'warning');
-      return;
-    }
-
-    setSections(prevSections =>
-      prevSections.map(sec => {
-        if (sec.id !== activeLectureSectionId) return sec;
-
-        if (editingLectureId) {
-          // Edit existing lecture
-          return {
-            ...sec,
-            lectures: sec.lectures.map(lec =>
-              lec.id === editingLectureId
-                ? {
-                    ...lec,
-                    title: modalLectureTitle.trim(),
-                    durationMinutes: Number(modalLectureDuration) || 10,
-                    type: modalLectureType,
-                    previewFree: modalLecturePreviewFree,
-                    videoUrl: modalLectureVideoUrl,
-                    content: modalLectureContent,
-                  }
-                : lec
-            ),
-          };
-        } else {
-          // Add new lecture
-          const newLec: Lecture = {
-            id: `lec-${Date.now()}`,
-            title: modalLectureTitle.trim(),
-            durationMinutes: Number(modalLectureDuration) || 10,
-            type: modalLectureType,
-            previewFree: modalLecturePreviewFree,
-            videoUrl: modalLectureVideoUrl,
-            content: modalLectureContent,
-          };
-          return {
-            ...sec,
-            lectures: [...sec.lectures, newLec],
-          };
-        }
-      })
-    );
-
-    setLectureModalOpen(false);
-    showToast(editingLectureId ? 'Lesson updated.' : 'Lesson added to section.', 'success');
   };
 
   const handleDeleteLecture = (sectionId: string, lectureId: string) => {
@@ -459,20 +352,45 @@ export const CourseBuilder: React.FC<CourseBuilderProps> = ({ courseId: propCour
     setMaterials(materials.filter(m => m.id !== id));
   };
 
+  const workspaceBase = location.pathname.startsWith('/admin') ? '/admin' : '/instructor';
+  const isAdmin = currentUser?.role === 'admin';
+
+  useEffect(() => {
+    if (!isAdmin) return;
+    adminService.getUsers()
+      .then((rows) => {
+        const list = (Array.isArray(rows) ? rows : [])
+          .filter((user) => user.role === 'instructor' || user.role === 'admin')
+          .map((user) => ({
+            id: String(user.id),
+            name: user.name || user.email,
+            email: user.email || '',
+            role: user.role,
+          }));
+        setFaculty(list);
+      })
+      .catch(() => setFaculty([]));
+  }, [isAdmin]);
+
   // Master Save Handler
-  const handleSaveCourse = async () => {
+  const persistCourse = async (curriculumOverride?: Section[]): Promise<Course | null> => {
     if (!title.trim()) {
-      showToast('Course Title is required.', 'error');
+      showToast('Course title is required.', 'error');
       setActiveTab('overview');
-      return;
+      return null;
+    }
+    if (courseId && !curriculumReady) {
+      showToast('The curriculum is still loading. Wait a moment, then try again.', 'error');
+      return null;
     }
 
+    const curriculumSections = curriculumOverride || sections;
     setIsSaving(true);
-    const chosenCategoryId = selectedCategoryIds[0] || (categories[0]?.id || '1');
+    const chosenCategoryId = selectedCategoryIds[0] || '';
     const matchedCategory = categories.find(c => String(c.id) === String(chosenCategoryId));
 
-    const totalMinutes = sections.reduce((acc, s) => {
-      return acc + s.lectures.reduce((lAcc, l) => lAcc + (l.durationMinutes || 0), 0);
+    const totalMinutes = curriculumSections.reduce((acc, s) => {
+      return acc + (s.lectures || []).reduce((lAcc, l) => lAcc + (l.durationMinutes || 0), 0);
     }, 0);
     const calculatedHours = totalMinutes > 0 ? Number((totalMinutes / 60).toFixed(1)) : 10;
 
@@ -481,25 +399,26 @@ export const CourseBuilder: React.FC<CourseBuilderProps> = ({ courseId: propCour
       subtitle: subtitle.trim(),
       slug: slug.trim() || title.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-'),
       categoryId: String(chosenCategoryId),
-      subcategory: matchedCategory?.name || 'Computer Science',
-      instructorId: currentUser?.id || '1',
+      subcategory: matchedCategory?.name || '',
+      instructorId: (isAdmin ? selectedInstructorIds[0] : currentUser?.id) || currentUser?.id || '1',
+      ...(isAdmin ? { instructorIds: selectedInstructorIds } : {}),
       price: isFree ? 0 : Number(price),
       originalPrice: isFree ? 0 : Number(originalPrice || price),
       isFree,
       durationHours: calculatedHours,
       durationWeeks: durationUnit === 'Week(s)' ? Number(durationNumber) : Math.max(1, Math.round(calculatedHours / 4)),
-      lectureCount: totalLecturesCount,
+      lectureCount: curriculumSections.reduce((acc, s) => acc + (s.lectures?.length || 0), 0),
       level,
       language: 'English',
       lastUpdated: new Date().toISOString().split('T')[0],
       badges: featured ? ['Featured'] : [],
-      thumbnail: thumbnail || 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=800',
+      thumbnail: thumbnail || '',
       previewVideoUrl,
       whatYouWillLearn,
       requirements,
       targetAudience,
       description,
-      curriculum: sections,
+      curriculum: curriculumSections,
       status,
       featured,
       tags,
@@ -508,7 +427,6 @@ export const CourseBuilder: React.FC<CourseBuilderProps> = ({ courseId: propCour
         blockAfterFinished,
         allowRepurchase,
         repurchaseAction,
-        fakeStudentsEnrolled: Number(fakeStudentsEnrolled),
         maxStudents: Number(maxStudents),
         retakeCourse: Number(retakeCourse),
         finishButton,
@@ -517,26 +435,103 @@ export const CourseBuilder: React.FC<CourseBuilderProps> = ({ courseId: propCour
         passingScorePercent: Number(passingScorePercent),
         certificateEnabled,
         materials,
-        quizCount: sections.reduce((acc, s) => acc + s.lectures.filter(l => l.type === 'quiz').length, 0)
+        quizCount: curriculumSections.reduce((acc, s) => acc + (s.lectures || []).filter(l => l.type === 'quiz').length, 0)
       }
     };
 
     try {
-      if (existingCourse) {
-        updateCourse(existingCourse.id, payload);
-        showToast(`Course "${title}" updated successfully!`, 'success');
-        if (onSaved) onSaved({ ...existingCourse, ...payload } as Course);
-      } else {
-        const created = addCourse(payload as any);
-        showToast(`Course "${title}" created successfully!`, 'success');
-        if (onSaved) onSaved(created);
-        else navigate(`/instructor/courses`);
+      if (!selectedCategoryIds[0] || String(selectedCategoryIds[0]).startsWith('cat-')) {
+        showToast('Choose a category before saving this course.', 'error');
+        setIsSaving(false);
+        return null;
       }
+      if (existingCourse) {
+        const saved = await updateCourse(existingCourse.id, payload);
+        if (onSaved) onSaved(saved);
+        return saved;
+      }
+      const created = await addCourse(payload as any);
+      if (onSaved) onSaved(created);
+      return created;
     } catch (err) {
-      showToast('Error saving course. Please check inputs.', 'error');
+      showToast(apiErrorMessage(err, 'Error saving course. Please check inputs.'), 'error');
+      return null;
     } finally {
       setIsSaving(false);
     }
+  };
+
+  const handleSaveCourse = async () => {
+    const saved = await persistCourse();
+    if (!saved) return;
+    showToast(`Course "${title}" saved.`, 'success');
+    if (!existingCourse) {
+      navigate(`${workspaceBase}/courses/${saved.id}/edit`);
+    }
+  };
+
+  const openLessonForm = (sectionIndex: number, lectureIndex: number | null) => {
+    const section = sections[sectionIndex];
+    const lecture = lectureIndex === null ? null : section?.lectures?.[lectureIndex];
+    setLessonDraft({
+      sectionIndex,
+      lectureIndex,
+      title: lecture?.title || '',
+      type: lecture?.type || 'article',
+      durationMinutes: lecture?.durationMinutes || 10,
+      videoUrl: lecture?.videoUrl || '',
+      content: lecture?.content || '',
+    });
+    setActiveTab('curriculum');
+  };
+
+  const saveLessonDraft = async () => {
+    if (!lessonDraft) return;
+    if (!lessonDraft.title.trim()) {
+      showToast('Add a lesson title first.', 'error');
+      return;
+    }
+    const nextSections = sections.map((section, index) => {
+      if (index !== lessonDraft.sectionIndex) return section;
+      const lectures = [...(section.lectures || [])];
+      const existing = lessonDraft.lectureIndex === null ? null : lectures[lessonDraft.lectureIndex];
+      const payload: Lecture = {
+        id: existing?.id || `new-${Date.now()}`,
+        title: lessonDraft.title.trim(),
+        durationMinutes: Number(lessonDraft.durationMinutes) || 0,
+        type: lessonDraft.type,
+        videoUrl: lessonDraft.type === 'video' ? lessonDraft.videoUrl.trim() : '',
+        content: lessonDraft.content,
+        previewFree: existing?.previewFree || false,
+      };
+      if (lessonDraft.lectureIndex === null || !existing) {
+        lectures.push(payload);
+      } else {
+        lectures[lessonDraft.lectureIndex] = { ...existing, ...payload };
+      }
+      return { ...section, lectures };
+    });
+    setSections(nextSections);
+    const saved = await persistCourse(nextSections);
+    if (!saved) return;
+    if (saved.curriculum) setSections(saved.curriculum);
+    setLessonDraft(null);
+    showToast('Lesson saved.', 'success');
+    if (!existingCourse) {
+      navigate(`${workspaceBase}/courses/${saved.id}/edit?tab=curriculum`);
+    }
+  };
+
+  const moveLecture = (sectionIndex: number, lectureIndex: number, direction: -1 | 1) => {
+    setSections((prev) => prev.map((section, index) => {
+      if (index !== sectionIndex) return section;
+      const nextIndex = lectureIndex + direction;
+      if (nextIndex < 0 || nextIndex >= section.lectures.length) return section;
+      const lectures = [...section.lectures];
+      const [item] = lectures.splice(lectureIndex, 1);
+      lectures.splice(nextIndex, 0, item);
+      return { ...section, lectures };
+    }));
   };
 
   return (
@@ -646,6 +641,20 @@ export const CourseBuilder: React.FC<CourseBuilderProps> = ({ courseId: propCour
             <SettingsIcon className="w-4 h-4" />
             <span>Settings</span>
           </button>
+
+          {courseId && (
+            <button
+              type="button"
+              onClick={() => setActiveTab('announcements')}
+              className={`py-3 px-4 text-xs font-bold border-b-2 transition-colors flex items-center gap-2 whitespace-nowrap ${
+                activeTab === 'announcements'
+                  ? 'border-indigo-600 text-indigo-700 bg-indigo-50/40'
+                  : 'border-transparent text-slate-600 hover:text-slate-900 hover:border-slate-300'
+              }`}
+            >
+              <span>Announcements</span>
+            </button>
+          )}
         </div>
       </header>
 
@@ -690,6 +699,30 @@ export const CourseBuilder: React.FC<CourseBuilderProps> = ({ courseId: propCour
                   />
                 </div>
 
+                <label className="mt-4 flex items-start gap-2 text-sm text-slate-800">
+                  <input
+                    type="checkbox"
+                    className="mt-1"
+                    checked={featured}
+                    onChange={async (e) => {
+                      const next = e.target.checked;
+                      setFeatured(next);
+                      if (!existingCourse) return;
+                      try {
+                        await updateCourse(existingCourse.id, { featured: next });
+                        showToast(next ? 'This course is on the homepage.' : 'Removed from the homepage.', 'success');
+                      } catch (err) {
+                        setFeatured(!next);
+                        showToast(apiErrorMessage(err, 'Could not update the homepage setting.'), 'error');
+                      }
+                    }}
+                  />
+                  <span>
+                    <span className="font-semibold">Show this course on the homepage</span>
+                    <span className="block text-xs text-slate-500">Featured courses are the only ones on the homepage. Other courses stay on All courses.</span>
+                  </span>
+                </label>
+
                 {/* Permalink Editor */}
                 <div className="mt-4 pt-3 border-t border-slate-100">
                   <div className="flex items-center justify-between text-xs text-slate-500 mb-1">
@@ -717,6 +750,69 @@ export const CourseBuilder: React.FC<CourseBuilderProps> = ({ courseId: propCour
                   )}
                 </div>
               </div>
+
+              {isAdmin && (
+                <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs space-y-3">
+                  <div>
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700">Instructors</h3>
+                    <p className="text-xs text-slate-500 mt-1">
+                      Assign one or more instructors. Removing someone only takes them off this course. The course stays with you.
+                    </p>
+                  </div>
+                  {selectedInstructorIds.length === 0 ? (
+                    <p className="text-xs text-slate-600">No instructor assigned. Saving keeps this course under your admin account.</p>
+                  ) : (
+                    <div className="space-y-2">
+                      {selectedInstructorIds.map((id, index) => {
+                        const person = faculty.find((user) => user.id === id);
+                        return (
+                          <div key={id} className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 px-3 py-2">
+                            <div className="min-w-0">
+                              <div className="text-sm font-semibold text-slate-900 truncate">{person?.name || `Instructor ${id}`}</div>
+                              <div className="text-[11px] text-slate-500">{index === 0 ? 'Lead instructor' : 'Instructor'}</div>
+                            </div>
+                            <button
+                              type="button"
+                              className="text-xs font-semibold text-rose-700 hover:text-rose-900"
+                              onClick={() => setSelectedInstructorIds((current) => current.filter((item) => item !== id))}
+                            >
+                              Remove
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                  <div className="flex gap-2">
+                    <select
+                      value={instructorToAdd}
+                      onChange={(e) => setInstructorToAdd(e.target.value)}
+                      className="min-w-0 flex-1 px-3 py-2 rounded-xl border border-slate-200 text-xs font-medium text-slate-800 bg-white"
+                    >
+                      <option value="">Choose an instructor</option>
+                      {faculty.filter((user) => !selectedInstructorIds.includes(user.id)).map((user) => (
+                        <option key={user.id} value={user.id}>
+                          {user.name}{user.role === 'admin' ? ' (Admin)' : ''}
+                        </option>
+                      ))}
+                    </select>
+                    <button
+                      type="button"
+                      className="px-3 py-2 rounded-xl bg-slate-900 text-white text-xs font-semibold disabled:opacity-40"
+                      disabled={!instructorToAdd}
+                      onClick={() => {
+                        setSelectedInstructorIds((current) => current.includes(instructorToAdd) ? current : [...current, instructorToAdd]);
+                        setInstructorToAdd('');
+                      }}
+                    >
+                      Add
+                    </button>
+                  </div>
+                  <Link to="/admin/users" className="inline-block text-xs font-semibold text-indigo-700 hover:text-indigo-900">
+                    Add a new instructor account
+                  </Link>
+                </div>
+              )}
 
               {/* Publish Meta Box */}
               <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs space-y-4">
@@ -783,11 +879,22 @@ export const CourseBuilder: React.FC<CourseBuilderProps> = ({ courseId: propCour
                   )}
                 </div>
 
+                {!thumbnail && (
+                  <div className="mb-3 aspect-video overflow-hidden rounded-xl border border-slate-200">
+                    <CourseCover
+                      title={title || 'Course title'}
+                      category={categories.find((item) => String(item.id) === String(selectedCategoryIds[0]))?.name}
+                      categoryId={selectedCategoryIds[0]}
+                      thumbnail=""
+                    />
+                  </div>
+                )}
+
                 <MediaUploader
                   value={thumbnail}
                   onChange={(url) => setThumbnail(url)}
                   label="Course Thumbnail / Banner"
-                  helperText="Recommended 16:9 aspect ratio (1280x720px)"
+                  helperText="Leave this empty to use the generated cover. Adding a picture replaces it."
                 />
 
                 {/* Preview Video URL */}
@@ -808,179 +915,34 @@ export const CourseBuilder: React.FC<CourseBuilderProps> = ({ courseId: propCour
 
             {/* Right Column: Description, Categories, Tags (7 cols) */}
             <div className="lg:col-span-7 space-y-6">
-              {/* Description with Visual Toolbar */}
               <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs">
-                <div className="flex items-center justify-between gap-3 mb-3">
-                  <label className="text-xs font-bold uppercase tracking-wider text-slate-700">
-                    Course Description
-                  </label>
-                  <div className="flex items-center gap-1 bg-slate-100 p-0.5 rounded-lg text-xs font-medium">
-                    <button
-                      type="button"
-                      onClick={() => setDescriptionTab('visual')}
-                      className={`px-3 py-1 rounded-md transition-colors ${
-                        descriptionTab === 'visual'
-                          ? 'bg-white text-indigo-700 shadow-xs font-bold'
-                          : 'text-slate-600 hover:text-slate-900'
-                      }`}
-                    >
-                      Visual Editor
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setDescriptionTab('code')}
-                      className={`px-3 py-1 rounded-md transition-colors ${
-                        descriptionTab === 'code'
-                          ? 'bg-white text-indigo-700 shadow-xs font-bold'
-                          : 'text-slate-600 hover:text-slate-900'
-                      }`}
-                    >
-                      Code / Raw
-                    </button>
-                  </div>
-                </div>
-
-                {/* Rich Toolbar */}
-                <div className="flex flex-wrap items-center gap-1 p-2 bg-slate-50 border border-slate-200 rounded-t-xl text-slate-700">
-                  <button
-                    type="button"
-                    onClick={() => setDescription(prev => prev + ' **bold text** ')}
-                    className="p-1.5 rounded hover:bg-slate-200 transition-colors"
-                    title="Bold"
-                  >
-                    <Bold className="w-3.5 h-3.5" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setDescription(prev => prev + ' *italic text* ')}
-                    className="p-1.5 rounded hover:bg-slate-200 transition-colors"
-                    title="Italic"
-                  >
-                    <Italic className="w-3.5 h-3.5" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setDescription(prev => prev + ' <u>underlined</u> ')}
-                    className="p-1.5 rounded hover:bg-slate-200 transition-colors"
-                    title="Underline"
-                  >
-                    <Underline className="w-3.5 h-3.5" />
-                  </button>
-                  <span className="w-px h-4 bg-slate-200 mx-1" />
-                  <button
-                    type="button"
-                    onClick={() => setDescription(prev => prev + '\n- Item 1\n- Item 2\n')}
-                    className="p-1.5 rounded hover:bg-slate-200 transition-colors"
-                    title="Bullet List"
-                  >
-                    <List className="w-3.5 h-3.5" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setDescription(prev => prev + '\n1. First item\n2. Second item\n')}
-                    className="p-1.5 rounded hover:bg-slate-200 transition-colors"
-                    title="Numbered List"
-                  >
-                    <ListOrdered className="w-3.5 h-3.5" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setDescription(prev => prev + '\n> Inspiring quote or key takeaway\n')}
-                    className="p-1.5 rounded hover:bg-slate-200 transition-colors"
-                    title="Quote"
-                  >
-                    <Quote className="w-3.5 h-3.5" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setDescription(prev => prev + '\n```\n// code snippet\n```\n')}
-                    className="p-1.5 rounded hover:bg-slate-200 transition-colors"
-                    title="Code Block"
-                  >
-                    <Code className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-
-                <textarea
-                  rows={8}
+                <RichTextEditor
+                  label="Course description"
                   value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  placeholder="Step into the future of technology with this course — an enterprise-grade learning journey..."
-                  className="w-full p-4 rounded-b-xl border-x border-b border-slate-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 text-sm text-slate-800 placeholder-slate-400 font-sans leading-relaxed"
+                  onChange={setDescription}
+                  placeholder="Describe what the student will learn."
+                  minHeight="220px"
                 />
               </div>
 
-              {/* Categories Box with Search and Add Category */}
               <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs">
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700">
-                    Categories & Taxonomies
-                  </h3>
-                  <button
-                    type="button"
-                    onClick={() => setIsAddingNewCategory(!isAddingNewCategory)}
-                    className="text-xs text-indigo-600 hover:text-indigo-800 font-bold flex items-center gap-1"
-                  >
-                    <Plus className="w-3.5 h-3.5" />
-                    <span>{isAddingNewCategory ? 'Cancel' : 'Add New'}</span>
-                  </button>
-                </div>
-
-                {/* Inline Add Category Form */}
-                {isAddingNewCategory && (
-                  <div className="mb-4 p-3 bg-indigo-50/50 border border-indigo-150 rounded-xl flex items-center gap-2">
-                    <input
-                      type="text"
-                      value={newCategoryName}
-                      onChange={(e) => setNewCategoryName(e.target.value)}
-                      placeholder="Category name (e.g. Quantum Computing)"
-                      className="flex-1 px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-xs font-medium text-slate-900"
-                    />
-                    <button
-                      type="button"
-                      onClick={handleAddNewCategory}
-                      className="px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-xs font-bold hover:bg-indigo-700"
-                    >
-                      Save
-                    </button>
-                  </div>
+                <label htmlFor="course-category" className="block text-sm font-semibold text-slate-800 mb-2">
+                  Category
+                </label>
+                <select
+                  id="course-category"
+                  value={selectedCategoryIds[0] || ''}
+                  onChange={(e) => setSelectedCategoryIds(e.target.value ? [e.target.value] : [])}
+                  className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm text-slate-900 bg-white"
+                >
+                  <option value="">Choose a category</option>
+                  {categories.map((cat) => (
+                    <option key={cat.id} value={String(cat.id)}>{cat.name}</option>
+                  ))}
+                </select>
+                {categories.length === 0 && (
+                  <p className="mt-2 text-xs text-slate-500">An admin needs to add a category before this course can be saved.</p>
                 )}
-
-                {/* Category Search Filter */}
-                <div className="relative mb-3">
-                  <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                  <input
-                    type="text"
-                    value={categorySearch}
-                    onChange={(e) => setCategorySearch(e.target.value)}
-                    placeholder="Search categories..."
-                    className="w-full pl-8 pr-3 py-1.5 rounded-lg border border-slate-200 text-xs text-slate-800 placeholder-slate-400"
-                  />
-                </div>
-
-                {/* Categories Checkboxes List */}
-                <div className="max-h-48 overflow-y-auto space-y-1.5 pr-2 divide-y divide-slate-100">
-                  {filteredCategories.map(cat => {
-                    const isChecked = selectedCategoryIds.includes(String(cat.id));
-                    return (
-                      <label
-                        key={cat.id}
-                        className="flex items-center gap-2.5 pt-1.5 first:pt-0 cursor-pointer text-xs font-medium text-slate-700 hover:text-indigo-900"
-                      >
-                        <input
-                          type="checkbox"
-                          checked={isChecked}
-                          onChange={() => toggleCategory(String(cat.id))}
-                          className="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 border-slate-300"
-                        />
-                        <span>{cat.name}</span>
-                      </label>
-                    );
-                  })}
-                  {filteredCategories.length === 0 && (
-                    <p className="text-xs text-slate-400 py-2">No matching categories found.</p>
-                  )}
-                </div>
               </div>
 
               {/* Tags Box */}
@@ -1055,31 +1017,14 @@ export const CourseBuilder: React.FC<CourseBuilderProps> = ({ courseId: propCour
                 </p>
               </div>
 
-              <div className="flex items-center gap-3">
-                <span className="text-xs font-bold text-indigo-700 bg-indigo-50 border border-indigo-150 px-3 py-1.5 rounded-xl">
-                  {sections.length} Sections · {totalLecturesCount} Items
-                </span>
-                <button
-                  type="button"
-                  onClick={handleExpandAllSections}
-                  className="text-xs font-semibold text-slate-600 hover:text-slate-900 bg-slate-100 px-2.5 py-1.5 rounded-lg"
-                >
-                  Expand All
-                </button>
-                <button
-                  type="button"
-                  onClick={handleCollapseAllSections}
-                  className="text-xs font-semibold text-slate-600 hover:text-slate-900 bg-slate-100 px-2.5 py-1.5 rounded-lg"
-                >
-                  Collapse All
-                </button>
-              </div>
+              <span className="text-xs font-semibold text-slate-600">
+                {sections.length} sections · {totalLecturesCount} lessons
+              </span>
             </div>
 
             {/* Sections Accordion Stack */}
             <div className="space-y-4">
               {sections.map((section, secIdx) => {
-                const isExpanded = Boolean(expandedSectionIds[section.id]);
                 return (
                   <div
                     key={section.id}
@@ -1114,82 +1059,31 @@ export const CourseBuilder: React.FC<CourseBuilderProps> = ({ courseId: propCour
                         <button
                           type="button"
                           onClick={() => handleDeleteSection(section.id)}
-                          className="p-1.5 text-slate-400 hover:text-rose-600 rounded-lg hover:bg-rose-50 transition-colors"
-                          title="Delete section"
+                          className="text-xs font-semibold text-slate-500 hover:text-rose-700"
                         >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={() => toggleSectionExpand(section.id)}
-                          className="p-1.5 text-slate-500 hover:text-slate-900 rounded-lg hover:bg-slate-200 transition-colors"
-                          title={isExpanded ? 'Collapse' : 'Expand'}
-                        >
-                          {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                          Delete
                         </button>
                       </div>
                     </div>
 
-                    {/* Section Lectures Body (When Expanded) */}
-                    {isExpanded && (
-                      <div className="p-4 sm:p-5 space-y-3 bg-white">
-                        {/* Lecture Items List */}
+                    <div className="p-4 space-y-2 bg-white">
                         <div className="space-y-2">
                           {section.lectures?.map((lecture, lecIdx) => (
                             <div
                               key={lecture.id}
-                              className="group p-3 rounded-xl border border-slate-150 hover:border-indigo-200 bg-white hover:bg-indigo-50/20 transition-all flex items-center justify-between gap-3"
+                              className="flex items-center justify-between gap-3 py-2 border-b border-slate-100"
                             >
-                              <div className="flex items-center gap-3 min-w-0 flex-1">
-                                <GripVertical className="w-3.5 h-3.5 text-slate-300 group-hover:text-slate-500 shrink-0 cursor-grab" />
-                                
-                                {/* Lecture Type Icon */}
-                                <div className="p-1.5 rounded-lg bg-slate-100 text-slate-700 shrink-0">
-                                  {lecture.type === 'video' && <Video className="w-3.5 h-3.5 text-indigo-600" />}
-                                  {lecture.type === 'article' && <FileText className="w-3.5 h-3.5 text-emerald-600" />}
-                                  {lecture.type === 'quiz' && <HelpCircle className="w-3.5 h-3.5 text-amber-600" />}
-                                  {lecture.type === 'resource' && <Download className="w-3.5 h-3.5 text-blue-600" />}
+                              <div className="min-w-0">
+                                <div className="text-sm font-semibold text-slate-900 truncate">
+                                  {lecIdx + 1}. {lecture.title}
                                 </div>
-
-                                <div className="min-w-0 flex-1">
-                                  <div className="text-xs font-bold text-slate-900 truncate">
-                                    {lecture.title}
-                                  </div>
-                                  <div className="flex items-center gap-2 text-[11px] text-slate-400 mt-0.5">
-                                    <span className="capitalize">{lecture.type}</span>
-                                    <span>·</span>
-                                    <span>{lecture.durationMinutes} mins</span>
-                                    {lecture.previewFree && (
-                                      <>
-                                        <span>·</span>
-                                        <span className="text-emerald-600 font-semibold bg-emerald-50 px-1.5 py-0.2 rounded">
-                                          Free Preview
-                                        </span>
-                                      </>
-                                    )}
-                                  </div>
-                                </div>
+                                <div className="text-xs text-slate-500 capitalize">{lecture.type}</div>
                               </div>
-
-                              {/* Actions */}
-                              <div className="flex items-center gap-1 shrink-0">
-                                <button
-                                  type="button"
-                                  onClick={() => openEditLectureModal(section.id, lecture)}
-                                  className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
-                                  title="Edit lesson"
-                                >
-                                  <Edit3 className="w-3.5 h-3.5" />
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => handleDeleteLecture(section.id, lecture.id)}
-                                  className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
-                                  title="Delete lesson"
-                                >
-                                  <Trash2 className="w-3.5 h-3.5" />
-                                </button>
+                              <div className="flex items-center gap-2 shrink-0 text-xs font-semibold">
+                                <button type="button" onClick={() => moveLecture(secIdx, lecIdx, -1)} className="text-slate-500 hover:text-slate-900">Up</button>
+                                <button type="button" onClick={() => moveLecture(secIdx, lecIdx, 1)} className="text-slate-500 hover:text-slate-900">Down</button>
+                                <button type="button" onClick={() => openLessonForm(secIdx, lecIdx)} className="text-emerald-800 hover:text-emerald-950">Edit</button>
+                                <button type="button" onClick={() => handleDeleteLecture(section.id, lecture.id)} className="text-rose-700 hover:text-rose-900">Delete</button>
                               </div>
                             </div>
                           ))}
@@ -1202,52 +1096,94 @@ export const CourseBuilder: React.FC<CourseBuilderProps> = ({ courseId: propCour
                         </div>
 
                         {/* Quick Add Buttons inside Section */}
+                        {lessonDraft?.sectionIndex === secIdx && (
+                          <div className="mt-3 rounded-xl border border-indigo-200 bg-indigo-50/40 p-4 space-y-3">
+                            <div className="text-sm font-bold text-slate-900">
+                              {lessonDraft.lectureIndex === null ? 'New lesson' : 'Edit lesson'}
+                            </div>
+                            <div>
+                              <label className="block text-xs font-semibold text-slate-700 mb-1">Title</label>
+                              <input
+                                value={lessonDraft.title}
+                                onChange={(e) => setLessonDraft({ ...lessonDraft, title: e.target.value })}
+                                className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm bg-white"
+                                placeholder="Lesson title"
+                              />
+                            </div>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                              <div>
+                                <label className="block text-xs font-semibold text-slate-700 mb-1">Type</label>
+                                <select
+                                  value={lessonDraft.type}
+                                  onChange={(e) => setLessonDraft({ ...lessonDraft, type: e.target.value as Lecture['type'] })}
+                                  className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm bg-white"
+                                >
+                                  <option value="video">Video</option>
+                                  <option value="article">Article</option>
+                                  <option value="quiz">Quiz</option>
+                                  <option value="resource">Download</option>
+                                </select>
+                              </div>
+                              <div>
+                                <label className="block text-xs font-semibold text-slate-700 mb-1">Minutes</label>
+                                <input
+                                  type="number"
+                                  min="0"
+                                  value={lessonDraft.durationMinutes}
+                                  onChange={(e) => setLessonDraft({ ...lessonDraft, durationMinutes: Number(e.target.value) })}
+                                  className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm bg-white"
+                                />
+                              </div>
+                            </div>
+                            {lessonDraft.type === 'video' && (
+                              <div>
+                                <label className="block text-xs font-semibold text-slate-700 mb-1">Video link</label>
+                                <input
+                                  value={lessonDraft.videoUrl}
+                                  onChange={(e) => setLessonDraft({ ...lessonDraft, videoUrl: e.target.value })}
+                                  className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm bg-white"
+                                  placeholder="https://"
+                                />
+                              </div>
+                            )}
+                            <RichTextEditor
+                              label="Lesson content"
+                              value={lessonDraft.content}
+                              onChange={(html) => setLessonDraft((current) => current ? { ...current, content: html } : current)}
+                              placeholder="Write the lesson."
+                              minHeight="220px"
+                            />
+                            <div className="flex items-center gap-2">
+                              <button
+                                type="button"
+                                disabled={isSaving}
+                                onClick={saveLessonDraft}
+                                className="px-4 py-2 rounded-lg bg-indigo-600 text-white text-xs font-bold disabled:opacity-60"
+                              >
+                                {isSaving ? 'Saving...' : 'Save lesson'}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setLessonDraft(null)}
+                                className="px-3 py-2 text-xs font-semibold text-slate-600"
+                              >
+                                Cancel
+                              </button>
+                            </div>
+                          </div>
+                        )}
+
                         <div className="pt-2 flex flex-wrap items-center gap-2">
                           <button
                             type="button"
-                            onClick={() => openAddLectureModal(section.id)}
+                            onClick={() => openLessonForm(secIdx, null)}
                             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-bold transition-colors"
                           >
                             <Plus className="w-3.5 h-3.5" />
-                            <span>Add Lesson</span>
-                          </button>
-
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setActiveLectureSectionId(section.id);
-                              setEditingLectureId(null);
-                              setModalLectureTitle('');
-                              setModalLectureDuration(20);
-                              setModalLectureType('quiz');
-                              setModalLecturePreviewFree(false);
-                              setLectureModalOpen(true);
-                            }}
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-700 text-xs font-bold transition-colors"
-                          >
-                            <HelpCircle className="w-3.5 h-3.5" />
-                            <span>Add Quiz</span>
-                          </button>
-
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setActiveLectureSectionId(section.id);
-                              setEditingLectureId(null);
-                              setModalLectureTitle('');
-                              setModalLectureDuration(10);
-                              setModalLectureType('article');
-                              setModalLecturePreviewFree(false);
-                              setLectureModalOpen(true);
-                            }}
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-xs font-bold transition-colors"
-                          >
-                            <FileText className="w-3.5 h-3.5" />
-                            <span>Add Article</span>
+                            <span>Add lesson</span>
                           </button>
                         </div>
                       </div>
-                    )}
                   </div>
                 );
               })}
@@ -1283,6 +1219,10 @@ export const CourseBuilder: React.FC<CourseBuilderProps> = ({ courseId: propCour
         {/* ============================================================ */}
         {/* TAB 3: SETTINGS */}
         {/* ============================================================ */}
+        {activeTab === 'announcements' && courseId && (
+          <CourseAnnouncementsPanel courseId={courseId} />
+        )}
+
         {activeTab === 'settings' && (
           <div className="bg-white border border-slate-200 rounded-2xl shadow-xs overflow-hidden grid grid-cols-1 md:grid-cols-12 min-h-[500px]">
             {/* Sub-Navigation Sidebar (4 cols) */}
@@ -1399,7 +1339,7 @@ export const CourseBuilder: React.FC<CourseBuilderProps> = ({ courseId: propCour
                           onChange={(e) => setBlockContent(e.target.checked)}
                           className="sr-only peer"
                         />
-                        <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:width-5 after:transition-all peer-checked:bg-indigo-600"></div>
+                        <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
                       </label>
                     </div>
                   </div>
@@ -1418,7 +1358,7 @@ export const CourseBuilder: React.FC<CourseBuilderProps> = ({ courseId: propCour
                           onChange={(e) => setBlockAfterFinished(e.target.checked)}
                           className="sr-only peer"
                         />
-                        <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:width-5 after:transition-all peer-checked:bg-indigo-600"></div>
+                        <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
                       </label>
                     </div>
                   </div>
@@ -1437,7 +1377,7 @@ export const CourseBuilder: React.FC<CourseBuilderProps> = ({ courseId: propCour
                           onChange={(e) => setAllowRepurchase(e.target.checked)}
                           className="sr-only peer"
                         />
-                        <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:width-5 after:transition-all peer-checked:bg-indigo-600"></div>
+                        <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
                       </label>
                       {allowRepurchase && (
                         <select
@@ -1474,23 +1414,6 @@ export const CourseBuilder: React.FC<CourseBuilderProps> = ({ courseId: propCour
                     </div>
                   </div>
 
-                  {/* Fake / Display Student Boost */}
-                  <div className="pt-4 grid grid-cols-1 sm:grid-cols-3 gap-4 items-center">
-                    <div>
-                      <label className="text-xs font-bold text-slate-800">Display Student Boost</label>
-                      <p className="text-[11px] text-slate-400 mt-0.5">Social proof display boost for storefront.</p>
-                    </div>
-                    <div className="sm:col-span-2">
-                      <input
-                        type="number"
-                        min="0"
-                        value={fakeStudentsEnrolled}
-                        onChange={(e) => setFakeStudentsEnrolled(Number(e.target.value))}
-                        className="w-32 px-3 py-2 rounded-xl border border-slate-200 text-xs font-semibold text-slate-900"
-                      />
-                    </div>
-                  </div>
-
                   {/* Maximum Students */}
                   <div className="pt-4 grid grid-cols-1 sm:grid-cols-3 gap-4 items-center">
                     <div>
@@ -1511,8 +1434,8 @@ export const CourseBuilder: React.FC<CourseBuilderProps> = ({ courseId: propCour
                   {/* Featured on Homepage */}
                   <div className="pt-4 grid grid-cols-1 sm:grid-cols-3 gap-4 items-center">
                     <div>
-                      <label className="text-xs font-bold text-slate-800">Featured Showcase</label>
-                      <p className="text-[11px] text-slate-400 mt-0.5">Highlight on main portal showcase carousel.</p>
+                      <label className="text-xs font-bold text-slate-800">Show on the homepage</label>
+                      <p className="text-[11px] text-slate-400 mt-0.5">Only ticked courses appear in Featured Courses.</p>
                     </div>
                     <div className="sm:col-span-2">
                       <label className="relative inline-flex items-center cursor-pointer">
@@ -1522,7 +1445,7 @@ export const CourseBuilder: React.FC<CourseBuilderProps> = ({ courseId: propCour
                           onChange={(e) => setFeatured(e.target.checked)}
                           className="sr-only peer"
                         />
-                        <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:width-5 after:transition-all peer-checked:bg-indigo-600"></div>
+                        <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
                       </label>
                     </div>
                   </div>
@@ -1562,7 +1485,7 @@ export const CourseBuilder: React.FC<CourseBuilderProps> = ({ courseId: propCour
                         onChange={(e) => setIsFree(e.target.checked)}
                         className="sr-only peer"
                       />
-                      <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:width-5 after:transition-all peer-checked:bg-indigo-600"></div>
+                      <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
                     </label>
                   </div>
 
@@ -1736,7 +1659,7 @@ export const CourseBuilder: React.FC<CourseBuilderProps> = ({ courseId: propCour
                             onChange={(e) => setCertificateEnabled(e.target.checked)}
                             className="sr-only peer"
                           />
-                          <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:width-5 after:transition-all peer-checked:bg-indigo-600"></div>
+                          <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
                         </label>
                         <span className="text-xs font-medium text-slate-700">
                           {certificateEnabled ? 'Automated Verified Certificate Enabled' : 'Disabled'}
@@ -1811,129 +1734,6 @@ export const CourseBuilder: React.FC<CourseBuilderProps> = ({ courseId: propCour
         )}
       </main>
 
-      {/* ============================================================ */}
-      {/* MODAL: ADD / EDIT LECTURE */}
-      {/* ============================================================ */}
-      {lectureModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs animate-in fade-in duration-150">
-          <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 space-y-4 text-left">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-                <Layers className="w-4 h-4 text-indigo-600" />
-                <span>{editingLectureId ? 'Edit Lesson' : 'Add New Lesson'}</span>
-              </h3>
-              <button
-                type="button"
-                onClick={() => setLectureModalOpen(false)}
-                className="p-1 rounded-lg text-slate-400 hover:text-slate-700"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            <div className="space-y-3.5">
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Lesson Title <span className="text-rose-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  value={modalLectureTitle}
-                  onChange={(e) => setModalLectureTitle(e.target.value)}
-                  placeholder="e.g. Distributed Consensus Algorithms"
-                  className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs font-medium text-slate-900"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Type</label>
-                  <select
-                    value={modalLectureType}
-                    onChange={(e) => setModalLectureType(e.target.value as any)}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs font-medium text-slate-800 bg-white"
-                  >
-                    <option value="video">Video Lecture</option>
-                    <option value="article">Reading Article</option>
-                    <option value="quiz">Interactive Quiz</option>
-                    <option value="resource">Resource Download</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Duration (Mins)</label>
-                  <input
-                    type="number"
-                    min="1"
-                    value={modalLectureDuration}
-                    onChange={(e) => setModalLectureDuration(Number(e.target.value))}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs font-medium text-slate-900"
-                  />
-                </div>
-              </div>
-
-              {modalLectureType === 'video' && (
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Video Stream URL</label>
-                  <input
-                    type="url"
-                    value={modalLectureVideoUrl}
-                    onChange={(e) => setModalLectureVideoUrl(e.target.value)}
-                    placeholder="https://... or HLS/MP4 link"
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs text-slate-900"
-                  />
-                </div>
-              )}
-
-              {modalLectureType === 'article' && (
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Article Content (Markdown)</label>
-                  <textarea
-                    rows={4}
-                    value={modalLectureContent}
-                    onChange={(e) => setModalLectureContent(e.target.value)}
-                    placeholder="Enter article text or documentation..."
-                    className="w-full p-3 rounded-xl border border-slate-200 text-xs text-slate-900"
-                  />
-                </div>
-              )}
-
-              <div className="p-3 bg-slate-50 rounded-xl flex items-center justify-between">
-                <div>
-                  <span className="text-xs font-semibold text-slate-800">Free Preview Lesson</span>
-                  <p className="text-[11px] text-slate-400">Allow prospective students to preview this lesson for free.</p>
-                </div>
-                <label className="relative inline-flex items-center cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={modalLecturePreviewFree}
-                    onChange={(e) => setModalLecturePreviewFree(e.target.checked)}
-                    className="sr-only peer"
-                  />
-                  <div className="w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:width-4 after:transition-all peer-checked:bg-indigo-600"></div>
-                </label>
-              </div>
-            </div>
-
-            <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-slate-100">
-              <button
-                type="button"
-                onClick={() => setLectureModalOpen(false)}
-                className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={handleSaveLecture}
-                className="px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow-xs"
-              >
-                {editingLectureId ? 'Update Lesson' : 'Add Lesson'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

@@ -558,7 +558,7 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
                 type="url"
                 value={imageUrl}
                 onChange={(e) => setImageUrl(e.target.value)}
-                placeholder="https://images.unsplash.com/... or /media/uploads/..."
+                placeholder="/empty-cover.svg or /media/uploads/..."
                 autoFocus
                 className="w-full border border-slate-300 rounded px-2.5 py-1.5 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-700"
                 onKeyDown={(e) => {

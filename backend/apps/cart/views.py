@@ -7,45 +7,42 @@ from apps.courses.models import Course
 from .models import Coupon, CartItem
 from .serializers import CouponSerializer, CartItemSerializer
 
+def cart_payload(user):
+    items = CartItem.objects.filter(user=user).select_related('course', 'course__instructor')
+    return {
+        'items': CartItemSerializer(items, many=True).data,
+        'subtotal': sum(float(item.course.price) for item in items),
+        'item_count': items.count(),
+    }
+
+
 class CartView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request):
-        items = CartItem.objects.filter(user=request.user).select_related('course', 'course__instructor')
-        serializer = CartItemSerializer(items, many=True)
-        subtotal = sum(float(item.course.price) for item in items)
-        return Response({
-            'items': serializer.data,
-            'subtotal': subtotal,
-            'item_count': items.count()
-        })
+        return Response(cart_payload(request.user))
 
     def post(self, request):
-        course_id = request.data.get('courseId')
+        course_id = request.data.get('courseId') or request.query_params.get('courseId')
         try:
             course = Course.objects.get(id=course_id)
-        except Course.DoesNotExist:
+        except (Course.DoesNotExist, ValueError, TypeError):
             return Response({'error': 'Course not found'}, status=status.HTTP_404_NOT_FOUND)
 
-        # Check if student is already enrolled in this course
         from apps.learning.models import Enrollment
         if Enrollment.objects.filter(user=request.user, course=course, is_active=True).exists():
             return Response({'error': f"You are already enrolled in '{course.title}'."}, status=status.HTTP_400_BAD_REQUEST)
 
-        item, created = CartItem.objects.get_or_create(user=request.user, course=course)
-        return Response({
-            'message': 'Course added to cart',
-            'created': created
-        }, status=status.HTTP_201_CREATED)
+        CartItem.objects.get_or_create(user=request.user, course=course)
+        return Response(cart_payload(request.user), status=status.HTTP_201_CREATED)
 
     def delete(self, request):
-        course_id = request.data.get('courseId')
+        course_id = request.data.get('courseId') or request.query_params.get('courseId')
         if course_id:
             CartItem.objects.filter(user=request.user, course_id=course_id).delete()
-            return Response({'message': 'Item removed from cart'})
         else:
             CartItem.objects.filter(user=request.user).delete()
-            return Response({'message': 'Cart cleared'})
+        return Response(cart_payload(request.user))
 
 
 class ValidateCouponView(APIView):

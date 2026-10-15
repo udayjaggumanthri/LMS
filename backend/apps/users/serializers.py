@@ -18,9 +18,14 @@ class UserSerializer(serializers.ModelSerializer):
             'students_count', 'total_earnings', 'joinedAt', 'enrolledCourseIds', 'wishlistCourseIds'
         ]
         read_only_fields = [
-            'id', 'joinedAt', 'rating', 'reviews_count', 'students_count',
+            'id', 'avatar', 'joinedAt', 'rating', 'reviews_count', 'students_count',
             'total_earnings', 'enrolledCourseIds', 'wishlistCourseIds'
         ]
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        data['avatar'] = ''
+        return data
 
     def get_name(self, obj):
         full = f"{obj.first_name} {obj.last_name}".strip()
@@ -62,11 +67,24 @@ class RegisterSerializer(serializers.ModelSerializer):
         model = User
         fields = ['username', 'email', 'password', 'role', 'name']
 
+    def validate_email(self, value):
+        email = (value or '').strip()
+        if not email:
+            raise serializers.ValidationError('Email is required.')
+        if User.objects.filter(email__iexact=email).exists():
+            raise serializers.ValidationError('An account with this email already exists.')
+        return email
+
+    def validate_role(self, value):
+        if value not in ('student', 'instructor'):
+            raise serializers.ValidationError('Choose student or instructor.')
+        return value
+
     def create(self, validated_data):
         name = validated_data.pop('name', '')
         password = validated_data.pop('password')
         role = validated_data.get('role', 'student')
-        
+
         first_name = name
         last_name = ''
         if ' ' in name:
@@ -74,15 +92,65 @@ class RegisterSerializer(serializers.ModelSerializer):
             first_name = parts[0]
             last_name = parts[1]
 
+        username = validated_data['username']
+        base = username
+        suffix = 1
+        while User.objects.filter(username=username).exists():
+            username = f'{base}{suffix}'
+            suffix += 1
+
         user = User(
-            username=validated_data['username'],
+            username=username,
             email=validated_data.get('email', ''),
             first_name=first_name,
             last_name=last_name,
             role=role,
-            is_approved_instructor=(role == 'instructor')
+            is_approved_instructor=False,
+            is_staff=False,
+            is_superuser=False,
         )
         user.set_password(password)
+        user.save()
+        return user
+
+
+class AdminUserCreateSerializer(serializers.Serializer):
+    name = serializers.CharField()
+    email = serializers.EmailField()
+    password = serializers.CharField(min_length=8, write_only=True)
+    role = serializers.ChoiceField(choices=['student', 'instructor', 'admin'])
+
+    def validate_email(self, value):
+        email = value.strip()
+        if User.objects.filter(email__iexact=email).exists():
+            raise serializers.ValidationError('An account with this email already exists.')
+        return email
+
+    def create(self, validated_data):
+        name = validated_data['name'].strip()
+        first_name = name
+        last_name = ''
+        if ' ' in name:
+            first_name, last_name = name.split(' ', 1)
+        local = validated_data['email'].split('@')[0]
+        username = ''.join(ch for ch in local if ch.isalnum() or ch in '._-') or 'user'
+        base = username
+        suffix = 1
+        while User.objects.filter(username=username).exists():
+            username = f'{base}{suffix}'
+            suffix += 1
+        role = validated_data['role']
+        user = User(
+            username=username,
+            email=validated_data['email'],
+            first_name=first_name,
+            last_name=last_name,
+            role=role,
+            is_staff=role == 'admin',
+            is_superuser=role == 'admin',
+            is_approved_instructor=role == 'instructor',
+        )
+        user.set_password(validated_data['password'])
         user.save()
         return user
 

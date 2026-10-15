@@ -10,8 +10,6 @@ from decimal import Decimal
 from django.conf import settings
 from apps.admin_governance.models import PaymentGatewaySettings
 from .models import Order, PaymentTransaction
-from apps.learning.models import Enrollment
-from apps.core.email_service import EmailService
 
 logger = logging.getLogger(__name__)
 
@@ -22,6 +20,38 @@ class NoRedirectHandler(urllib.request.HTTPRedirectHandler):
     """
     def redirect_request(self, req, fp, code, msg, headers, newurl):
         return None
+
+def return_url(base, **params):
+    """Append order id and invoice onto an LMS return address."""
+    parts = urllib.parse.urlsplit(base)
+    query = dict(urllib.parse.parse_qsl(parts.query, keep_blank_values=True))
+    for key, value in params.items():
+        if value is not None and value != '':
+            query[key] = str(value)
+    return urllib.parse.urlunsplit((parts.scheme, parts.netloc, parts.path, urllib.parse.urlencode(query), ''))
+
+
+def failure_message_from_location(url):
+    """ToucanPay puts a failure page in Location when the terminal or request is rejected."""
+    if not url or '/auth/failure/' not in url:
+        return None
+    token = url.split('/auth/failure/', 1)[1].split('?', 1)[0].strip()
+    pad = '=' * (-len(token) % 4)
+    text = ''
+    try:
+        import base64
+        text = base64.b64decode(token + pad).decode('utf-8', 'replace').strip()
+    except Exception:
+        text = ''
+    if 'terminal' in text.lower():
+        return (
+            'ToucanPay could not open checkout: this terminal is not registered on the gateway address saved in Payment Gateway. '
+            'Nothing was charged.'
+        )
+    if text:
+        return f'ToucanPay could not open checkout: {text} Nothing was charged.'
+    return 'ToucanPay could not open checkout. Nothing was charged.'
+
 
 class ToucanPayService:
     @staticmethod
@@ -50,22 +80,42 @@ class ToucanPayService:
     @classmethod
     def generate_invoice_number(cls, tid=None):
         """
-        Generates a unique order/invoice number >= 15 digits as mandated by ToucanPay.
-        Format: tid + ddMMyyyyHHmmss + microsecond[:3] + random 4 digits (29 digits total).
-        Guarantees 100% collision-free uniqueness across retries.
+        Order id from the checkout spec sample: ddMMyyyyHHmmss plus extra digits.
+        Minimum 15 digits, unique, and not prefixed with the terminal.
+        ToucanPay builds pspRefNo itself as terminal number + this invoice.
         """
-        if not tid:
-            pg = cls.get_settings()
-            tid = pg.tid if pg and pg.tid else '10000000'
-        clean_tid = ''.join(filter(str.isdigit, str(tid))) or '10000000'
         now = datetime.datetime.now()
         timestamp_str = now.strftime('%d%m%Y%H%M%S')
-        micro_str = f"{now.microsecond:06d}"[:3]
-        suffix = random.randint(1000, 9999)
-        return f"{clean_tid}{timestamp_str}{micro_str}{suffix}"
+        extra = f"{now.microsecond:06d}{random.randint(0, 99):02d}"
+        invoice = f"{timestamp_str}{extra}"
+        if PaymentTransaction.objects.filter(invoice_number=invoice).exists():
+            invoice = f"{timestamp_str}{random.randint(10000000, 99999999)}"
+        return invoice
+
+    @staticmethod
+    def resolve_return_urls(pg_settings, public_base=''):
+        """Saved admin addresses win. A blank address follows the site the shopper is on."""
+        base = (public_base or '').rstrip('/')
+        success = (pg_settings.success_url or '').strip()
+        failure = (pg_settings.failure_url or '').strip()
+        if not success and base:
+            success = f'{base}/order-confirmation'
+        if not failure and base:
+            failure = f'{base}/checkout?status=failed'
+        return success, failure
 
     @classmethod
-    def initiate_payment(cls, order, customer_name, customer_phone, customer_email):
+    def initiate_payment(cls, order, customer_name, customer_phone, customer_email, public_base=''):
+        from django.conf import settings as dj_settings
+        if getattr(dj_settings, 'PAYMENT_HUB_ENABLED', True):
+            from .hub_connector import initiate_through_hub
+            return initiate_through_hub(
+                order, customer_name, customer_phone, customer_email, public_base=public_base
+            )
+        return cls._initiate_payment_legacy(order, customer_name, customer_phone, customer_email, public_base)
+
+    @classmethod
+    def _initiate_payment_legacy(cls, order, customer_name, customer_phone, customer_email, public_base=''):
         """
         Initiates a payment session with ToucanPay Checkout API.
         Returns the authentic redirect URL where the customer completes payment.
@@ -90,13 +140,30 @@ class ToucanPayService:
 
         # Clean phone: ensure 10 digits
         clean_phone = ''.join(filter(str.isdigit, customer_phone or ''))
-        if len(clean_phone) < 10:
-            clean_phone = '9876543210'
-        elif len(clean_phone) > 10:
+        if len(clean_phone) > 10:
             clean_phone = clean_phone[-10:]
+        if len(clean_phone) != 10:
+            return {'success': False, 'error': 'Enter a 10-digit mobile number.'}
 
-        clean_name = (customer_name or 'Learner').strip()
-        clean_email = (customer_email or order.user.email or 'learner@domain.com').strip()
+        clean_name = (customer_name or '').strip() or (order.user.get_full_name() or '').strip() or order.user.username
+        clean_email = (customer_email or order.user.email or '').strip()
+        if not clean_email or '@' not in clean_email:
+            return {'success': False, 'error': 'A valid email is required for payment.'}
+
+        success_base, failure_base = cls.resolve_return_urls(pg_settings, public_base)
+        if not success_base or not failure_base:
+            return {
+                'success': False,
+                'error': 'Set the success and failure addresses in Admin → Payment Gateway before taking a payment.',
+            }
+
+        endpoint = (pg_settings.checkout_session_url or '').strip()
+        murl = (pg_settings.merchant_region_url or '').strip()
+        if not endpoint or not murl:
+            return {
+                'success': False,
+                'error': 'Set the checkout address and merchant region URL in Admin → Payment Gateway before taking a payment.',
+            }
 
         # Create PaymentTransaction record
         transaction = PaymentTransaction.objects.create(
@@ -109,34 +176,28 @@ class ToucanPayService:
             terminal_id=pg_settings.tid
         )
 
-        # Select endpoint based on environment
-        if pg_settings.environment == 'production':
-            endpoint = pg_settings.api_endpoint_prod
-        else:
-            endpoint = pg_settings.api_endpoint_uat
-
-        # Return URL pointing directly to order confirmation with order & invoice parameters
-        murl = f"{pg_settings.success_url}?orderId={order.id}&invoice={invoice_number}"
-
+        # Checkout, region, and return addresses are exactly what the admin saved.
+        # A completed payment is posted to surl, and a declined one to furl.
+        # Both come from the addresses saved in the admin payment settings.
+        return_params = {'orderId': order.id, 'invoice': invoice_number}
+        surl = return_url(success_base, **return_params)
+        furl = return_url(failure_base, status='cancelled', **return_params)
         payload = {
             't': pg_settings.tid,
-            'terminalNumber': pg_settings.tid,
             'o': invoice_number,
-            'merchantNumber': pg_settings.mid,
             'ta': ta_str,
-            'transactionAmount': ta_str,
             'c': 'INR',
-            'currencyCode': 'INR',
             'mac': pg_settings.mac_token,
             'murl': murl,
+            'surl': surl,
+            'furl': furl,
             'name': clean_name,
             'phone': clean_phone,
-            'emailId': clean_email,
+            'emaiId': clean_email,
             'ha': ha,
-            'sc': 'INR'
         }
 
-        logger.info(f"Initiating ToucanPay UAT session for Order {order.order_number}, Invoice {invoice_number}")
+        logger.info(f"Initiating ToucanPay session for Order {order.order_number}, Invoice {invoice_number}")
 
         # Send POST request to ToucanPay getpaymentsession using NoRedirectHandler
         opener = urllib.request.build_opener(NoRedirectHandler)
@@ -192,10 +253,30 @@ class ToucanPayService:
         except Exception as ex:
             logger.error(f"ToucanPay connection error: {ex}")
             transaction.raw_response = {'connection_exception': str(ex)}
+            transaction.status = 'failed'
             transaction.save()
+            host = endpoint.split('/')[2] if '://' in endpoint else endpoint
+            server_ip = (pg_settings.whitelisted_ip or '').strip()
+            where = f' from {server_ip}' if server_ip else ''
+            return {
+                'success': False,
+                'error': (
+                    f'Could not reach the saved checkout address at {host}{where}. '
+                    'Nothing was charged.'
+                ),
+            }
 
-        # If live redirect URL received from ToucanPay
+        # A failure Location is ToucanPay rejecting the session. Do not send the browser there.
         if redirect_url:
+            rejected = failure_message_from_location(redirect_url)
+            if rejected:
+                transaction.session_redirect_url = redirect_url
+                transaction.status = 'failed'
+                transaction.raw_response = {**(transaction.raw_response or {}), 'failure': rejected}
+                transaction.save(update_fields=['session_redirect_url', 'status', 'raw_response'])
+                logger.warning('ToucanPay refused the checkout session for invoice %s', invoice_number)
+                return {'success': False, 'error': rejected}
+
             transaction.session_redirect_url = redirect_url
             transaction.status = 'pending'
             transaction.save()
@@ -213,6 +294,14 @@ class ToucanPayService:
 
     @classmethod
     def check_payment_status(cls, invoice_number):
+        from django.conf import settings as dj_settings
+        if getattr(dj_settings, 'PAYMENT_HUB_ENABLED', True):
+            from .hub_connector import refresh_lms_payment
+            return refresh_lms_payment(invoice_number)
+        return cls._check_payment_status_legacy(invoice_number)
+
+    @classmethod
+    def _check_payment_status_legacy(cls, invoice_number):
         """
         Executes Status Check API against ToucanPay to verify transaction success.
         """
@@ -221,10 +310,9 @@ class ToucanPayService:
         if not transaction:
             return {'success': False, 'error': 'Transaction not found'}
 
-        if pg_settings.environment == 'production':
-            endpoint = pg_settings.status_check_endpoint_prod
-        else:
-            endpoint = pg_settings.status_check_endpoint_uat
+        endpoint = (pg_settings.status_check_url or '').strip()
+        if not endpoint:
+            return {'success': False, 'error': 'Set the status check address in Admin → Payment Gateway.'}
 
         req_body = {
             "messageID": "/api/pay/v1/checkStatus",
@@ -270,53 +358,27 @@ class ToucanPayService:
 
     @classmethod
     def mark_transaction_successful(cls, transaction, gateway_metadata=None):
-        """
-        Finalizes an order upon verified payment:
-        1. Marks transaction as 'success'
-        2. Sets Order to 'completed'
-        3. Enrolls student into all purchased courses
-        4. Dispatches invoice receipt email
-        """
-        transaction.status = 'success'
-        if gateway_metadata:
-            transaction.action_code = gateway_metadata.get('actionCode', '00')
-            transaction.approval_code = gateway_metadata.get('approvalCode', '')
-            transaction.rrn = gateway_metadata.get('rrn', '')
-            transaction.payer_vpa = gateway_metadata.get('custVpa', '')
-        transaction.save()
-
-        order = transaction.order
-        order.status = 'completed'
-        order.payment_method = 'ToucanPay Official Gateway'
-        order.payment_id = transaction.invoice_number
-        order.save()
-
-        # Enroll student in courses
-        for item in order.items.all():
-            Enrollment.objects.get_or_create(
-                user=order.user,
-                course=item.course,
-                defaults={'is_active': True}
-            )
-            item.course.student_count += 1
-            item.course.save(update_fields=['student_count'])
-
-        # Dispatch automated purchase receipt email
-        try:
-            EmailService.send_purchase_receipt(order.user, order)
-        except Exception as e:
-            logger.warning(f"Failed to send email receipt for Order {order.order_number}: {e}")
-
+        """Backward-compatible wrapper. Enrollment lives in orders.fulfillment."""
+        from .fulfillment import mark_lms_order_paid
+        order = mark_lms_order_paid(transaction.order, transaction, gateway_metadata)
         return {
             'success': True,
             'status': 'SUCCESS',
             'order_id': order.id,
             'order_number': order.order_number,
-            'invoice_number': transaction.invoice_number
+            'invoice_number': transaction.invoice_number,
         }
 
     @classmethod
-    def process_callback(cls, payload):
+    def process_callback(cls, payload, remote_addr='', forwarded_for=''):
+        from django.conf import settings as dj_settings
+        if getattr(dj_settings, 'PAYMENT_HUB_ENABLED', True):
+            from apps.payment_hub.services import process_callback
+            return process_callback(payload, remote_addr=remote_addr, forwarded_for=forwarded_for)
+        return cls._process_callback_legacy(payload)
+
+    @classmethod
+    def _process_callback_legacy(cls, payload):
         """
         Handles ToucanPay Server-to-Server Callback POST.
         """

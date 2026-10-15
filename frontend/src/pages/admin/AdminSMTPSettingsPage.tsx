@@ -7,10 +7,10 @@ import {
   CheckCircle2,
   AlertCircle,
   ShieldCheck,
-  BellRing,
   RefreshCw,
   Info
 } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { adminService } from '../../api/adminService';
 import { useNotifications } from '../../context/NotificationContext';
 import { Button } from '../../components/ui/Button';
@@ -124,7 +124,7 @@ export const AdminSMTPSettingsPage: React.FC = () => {
             </span>
           </div>
           <p className="text-xs text-slate-500 mt-1">
-            Configure platform mail server for welcome emails, enrollment receipts, and administrative alerts
+            Configure the mail server. Message wording lives on the templates page.
           </p>
         </div>
       </div>
@@ -255,54 +255,10 @@ export const AdminSMTPSettingsPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Automated Notification Triggers */}
-        <div className="p-6 border border-slate-200 rounded-lg bg-white space-y-4 shadow-2xs">
-          <h2 className="font-bold text-sm text-slate-900 flex items-center gap-2">
-            <BellRing className="w-4 h-4 text-emerald-800" />
-            <span>Automated Notification Triggers</span>
-          </h2>
-
-          <div className="divide-y divide-slate-100 text-xs">
-            <div className="py-3 flex items-center justify-between">
-              <div>
-                <div className="font-semibold text-slate-900">Welcome Email to New Users</div>
-                <div className="text-slate-500 text-[11px]">Send welcome email with learning workspace link upon account registration</div>
-              </div>
-              <input
-                type="checkbox"
-                checked={formData.sendWelcomeEmail}
-                onChange={(e) => setFormData({ ...formData, sendWelcomeEmail: e.target.checked })}
-                className="rounded border-slate-300 text-emerald-800 focus:ring-emerald-700"
-              />
-            </div>
-
-            <div className="py-3 flex items-center justify-between">
-              <div>
-                <div className="font-semibold text-slate-900">Order Confirmation & Tax Receipt</div>
-                <div className="text-slate-500 text-[11px]">Deliver itemized purchase invoice and curriculum access link to student upon checkout</div>
-              </div>
-              <input
-                type="checkbox"
-                checked={formData.sendPurchaseReceipt}
-                onChange={(e) => setFormData({ ...formData, sendPurchaseReceipt: e.target.checked })}
-                className="rounded border-slate-300 text-emerald-800 focus:ring-emerald-700"
-              />
-            </div>
-
-            <div className="py-3 flex items-center justify-between">
-              <div>
-                <div className="font-semibold text-slate-900">Course Publishing & Updates</div>
-                <div className="text-slate-500 text-[11px]">Notify enrolled learners when new lectures, assignments, or revisions are published</div>
-              </div>
-              <input
-                type="checkbox"
-                checked={formData.sendCourseUpdates}
-                onChange={(e) => setFormData({ ...formData, sendCourseUpdates: e.target.checked })}
-                className="rounded border-slate-300 text-emerald-800 focus:ring-emerald-700"
-              />
-            </div>
-          </div>
-        </div>
+        <Link to="/admin/mail-templates" className="block p-5 border border-slate-200 rounded-lg bg-white hover:border-emerald-300">
+          <div className="font-bold text-sm text-slate-900">Message templates</div>
+          <p className="text-xs text-slate-500 mt-1">Edit welcome, order confirmation, forgot password, and payment failed messages.</p>
+        </Link>
 
         {/* Action Button */}
         <div className="flex justify-end gap-3 pt-2">

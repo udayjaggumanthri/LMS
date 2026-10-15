@@ -5,6 +5,7 @@ from .models import Enrollment, LectureProgress, UserNote, Certificate
 class EnrollmentSerializer(serializers.ModelSerializer):
     course = CourseListSerializer(read_only=True)
     completedLecturesCount = serializers.SerializerMethodField()
+    completedLectureIds = serializers.SerializerMethodField()
     totalLecturesCount = serializers.SerializerMethodField()
     progressPercent = serializers.SerializerMethodField()
 
@@ -12,7 +13,16 @@ class EnrollmentSerializer(serializers.ModelSerializer):
         model = Enrollment
         fields = [
             'id', 'course', 'is_active', 'created_at', 'completed_at',
-            'completedLecturesCount', 'totalLecturesCount', 'progressPercent'
+            'completedLecturesCount', 'completedLectureIds', 'totalLecturesCount', 'progressPercent'
+        ]
+
+    def get_completedLectureIds(self, obj):
+        return [
+            str(lecture_id) for lecture_id in LectureProgress.objects.filter(
+                user=obj.user,
+                lecture__section__course=obj.course,
+                completed=True
+            ).values_list('lecture_id', flat=True)
         ]
 
     def get_completedLecturesCount(self, obj):
@@ -72,4 +82,4 @@ class CertificateSerializer(serializers.ModelSerializer):
         return full if full else inst.username
 
     def get_verifyUrl(self, obj):
-        return f"http://localhost:3000/certificates/verify/{obj.certificate_number}"
+        return f"https://uat.prajnadharaedu.com/learning/certificates/verify/{obj.certificate_number}"

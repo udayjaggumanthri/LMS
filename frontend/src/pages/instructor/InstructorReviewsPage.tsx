@@ -2,8 +2,10 @@ import React, { useState, useMemo } from 'react';
 import { useCourses } from '../../context/CourseContext';
 import { useAuth } from '../../context/AuthContext';
 import { useNotifications } from '../../context/NotificationContext';
+import { Avatar } from '../../components/ui/Avatar';
 import { Button } from '../../components/ui/Button';
 import { Rating } from '../../components/ui/Rating';
+import { userTeachesCourse } from '../../utils/courseFaculty';
 import {
   Star,
   MessageSquare,
@@ -22,7 +24,7 @@ export const InstructorReviewsPage: React.FC = () => {
 
   const myCourses = useMemo(() => {
     return courses.filter(
-      c => c.instructorId === currentUser?.id || c.instructorId === 'inst-7'
+      c => currentUser?.role === 'admin' || userTeachesCourse(c, currentUser?.id)
     );
   }, [courses, currentUser]);
 
@@ -178,11 +180,7 @@ export const InstructorReviewsPage: React.FC = () => {
               >
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex items-center gap-3">
-                    <img
-                      src={rev.userAvatar}
-                      alt={rev.userName}
-                      className="w-9 h-9 rounded-full object-cover border border-slate-200"
-                    />
+                    <Avatar name={rev.userName} size="md" />
                     <div>
                       <div className="font-bold text-slate-900 text-sm">{rev.userName}</div>
                       <div className="text-[11px] text-slate-500 font-medium">{courseTitle} &bull; {rev.date}</div>

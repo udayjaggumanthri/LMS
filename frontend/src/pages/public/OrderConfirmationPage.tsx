@@ -1,11 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
-import { CheckCircle2, Download, PlayCircle, FileText, ArrowRight, Loader2 } from 'lucide-react';
+import { CheckCircle2, Download, PlayCircle, Loader2 } from 'lucide-react';
 import { useLearning } from '../../context/LearningContext';
-import { useAuth } from '../../context/AuthContext';
 import { Button } from '../../components/ui/Button';
-import { Modal } from '../../components/ui/Modal';
-import { Logo } from '../../components/common/Logo';
+import { TaxInvoiceModal } from '../../components/orders/TaxInvoiceSheet';
+import { CourseCover } from '../../components/courses/CourseCover';
 import { orderService } from '../../api/orderService';
 
 export const OrderConfirmationPage: React.FC = () => {
@@ -32,54 +31,55 @@ export const OrderConfirmationPage: React.FC = () => {
 
   const invoice = rawInvoice;
   const orderId = rawOrderId;
+  const unmatched = searchParams.get('unmatched') === '1';
 
   const { orders, addOrder, refreshLearning } = useLearning();
-  const { currentUser } = useAuth();
 
   const [invoiceModalOpen, setInvoiceModalOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [fetchedOrder, setFetchedOrder] = useState<any>(null);
+  const [verifyError, setVerifyError] = useState('');
 
-  // Match by explicit invoice or orderId first, then fallback to fetched, then cached
   const matchedOrder = (orderId || invoice)
-    ? (orders.find(o => (orderId && String(o.id) === String(orderId)) || (invoice && (o.invoiceNumber === invoice || (o as any).paymentId === invoice))) || fetchedOrder)
-    : (fetchedOrder || orders[0]);
+    ? (fetchedOrder || orders.find(o => (orderId && String(o.id) === String(orderId)) || (invoice && o.invoiceNumber === invoice)))
+    : fetchedOrder;
+
+  const addOrderRef = useRef(addOrder);
+  const refreshLearningRef = useRef(refreshLearning);
+  addOrderRef.current = addOrder;
+  refreshLearningRef.current = refreshLearning;
 
   useEffect(() => {
-    if (invoice || orderId) {
-      setLoading(true);
-      orderService.verifyToucanPayment({
-        invoiceNumber: invoice || undefined,
-        orderId: orderId || undefined,
+    if (!invoice && !orderId) return;
+    let cancelled = false;
+    setLoading(true);
+    setVerifyError('');
+    orderService.verifyToucanPayment({
+      invoiceNumber: invoice || undefined,
+      orderId: orderId || undefined,
+    })
+      .then((res) => {
+        if (cancelled) return;
+        if (res.success && res.order) {
+          setFetchedOrder(res.order);
+          addOrderRef.current(res.order);
+          refreshLearningRef.current();
+          return;
+        }
+        setVerifyError(res.error || 'Payment is not confirmed yet.');
       })
-        .then((res) => {
-          if (res.success && res.order) {
-            setFetchedOrder(res.order);
-            addOrder(res.order);
-            refreshLearning();
-          }
-        })
-        .catch((err) => {
-          console.warn('Payment verification notice:', err);
-        })
-        .finally(() => setLoading(false));
-    } else if (!matchedOrder && currentUser) {
-      // If user landed here without params, fetch their latest order
-      setLoading(true);
-      orderService.getMyOrders()
-        .then((myOrders) => {
-          if (myOrders && myOrders.length > 0) {
-            setFetchedOrder(myOrders[0]);
-            addOrder(myOrders[0]);
-            refreshLearning();
-          }
-        })
-        .catch((err) => {
-          console.warn('Failed to load user orders:', err);
-        })
-        .finally(() => setLoading(false));
-    }
-  }, [invoice, orderId, currentUser, addOrder, refreshLearning]);
+      .catch((err) => {
+        if (!cancelled) {
+          setVerifyError(err?.response?.data?.error || 'Payment is not confirmed yet.');
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [invoice, orderId]);
 
   const order = matchedOrder;
 
@@ -93,11 +93,53 @@ export const OrderConfirmationPage: React.FC = () => {
     );
   }
 
+  if (verifyError && !order) {
+    return (
+      <div className="max-w-md mx-auto px-4 py-20 text-center">
+        <h2 className="text-xl font-bold font-display text-slate-900">Payment not confirmed</h2>
+        <p className="text-xs text-slate-500 mt-2 mb-4">{verifyError}</p>
+        <Button
+          variant="primary"
+          size="sm"
+          disabled={loading}
+          onClick={() => {
+            setVerifyError('');
+            setLoading(true);
+            orderService.verifyToucanPayment({
+              invoiceNumber: invoice || undefined,
+              orderId: orderId || undefined,
+            })
+              .then((res) => {
+                if (res.success && res.order) {
+                  setFetchedOrder(res.order);
+                  addOrder(res.order);
+                  refreshLearning();
+                }
+              })
+              .catch((err) => {
+                setVerifyError(err?.response?.data?.error || 'Payment is not confirmed yet.');
+              })
+              .finally(() => setLoading(false));
+          }}
+        >
+          Check with Toucan
+        </Button>
+        <Link to="/checkout" className="block mt-3 text-sm font-semibold text-emerald-800">Return to checkout</Link>
+      </div>
+    );
+  }
+
   if (!order) {
     return (
       <div className="max-w-md mx-auto px-4 py-20 text-center">
-        <h2 className="text-xl font-bold font-display text-slate-900">Order Not Found</h2>
-        <p className="text-xs text-slate-500 mt-2 mb-4">No active or matching order found for this reference.</p>
+        <h2 className="text-xl font-bold font-display text-slate-900">
+          {unmatched || (!invoice && !orderId) ? 'Payment return received' : 'Order Not Found'}
+        </h2>
+        <p className="text-xs text-slate-500 mt-2 mb-4">
+          {unmatched || (!invoice && !orderId)
+            ? 'The gateway sent you back without an order reference. Log in and open Purchase history. A successful payment is listed there.'
+            : 'No active or matching order found for this reference.'}
+        </p>
         <Link to="/" className="inline-block">
           <Button variant="outline" size="sm">Go to Homepage</Button>
         </Link>
@@ -147,11 +189,14 @@ export const OrderConfirmationPage: React.FC = () => {
               className="p-5 border border-slate-200 rounded bg-white flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"
             >
               <div className="flex items-center gap-4">
-                <img
-                  src={item.thumbnail || 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=800&auto=format&fit=crop&q=80'}
-                  alt={item.courseTitle}
-                  className="w-20 aspect-video rounded object-cover border border-slate-200 shrink-0"
-                />
+                <div className="w-20 aspect-video rounded overflow-hidden border border-slate-200 shrink-0">
+                  <CourseCover
+                    title={item.courseTitle}
+                    category={item.category || item.subcategory}
+                    thumbnail={item.thumbnail}
+                    size="sm"
+                  />
+                </div>
                 <div>
                   <h3 className="font-bold text-sm text-slate-900">{item.courseTitle}</h3>
                   <p className="text-xs text-slate-500 mt-0.5">Lifetime Access · Full Syllabus Unlocked</p>
@@ -199,64 +244,10 @@ export const OrderConfirmationPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Invoice Modal */}
-      <Modal
-        isOpen={invoiceModalOpen}
+      <TaxInvoiceModal
+        orderId={invoiceModalOpen ? order.id : null}
         onClose={() => setInvoiceModalOpen(false)}
-        title="Official Tax Invoice"
-        size="lg"
-      >
-        <div className="p-6 border border-slate-200 rounded bg-white text-xs space-y-6 text-slate-900">
-          <div className="flex items-center justify-between border-b border-slate-200 pb-4">
-            <Logo size="md" />
-            <div className="text-right">
-              <div className="font-bold text-sm text-slate-900">{order.invoiceNumber}</div>
-              <div className="text-slate-500">{order.createdAt}</div>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <div className="font-bold uppercase tracking-wider text-slate-400 text-[10px] mb-1">Billed To</div>
-              <div className="font-bold text-slate-900">{currentUser?.name || (currentUser as any)?.username || 'Verified Learner'}</div>
-              <div className="text-slate-500">{currentUser?.email || 'learner@prajnadhara.edu'}</div>
-              <div className="text-slate-500">Bengaluru, Karnataka, India</div>
-            </div>
-            <div className="text-right">
-              <div className="font-bold uppercase tracking-wider text-slate-400 text-[10px] mb-1">Issued By</div>
-              <div className="font-bold text-slate-900">PrajnadharaEdu Marketplace</div>
-              <div className="text-slate-500">GSTIN: 29AABCP1234F1Z8</div>
-              <div className="text-slate-500">Outer Ring Road, Bengaluru 560103</div>
-            </div>
-          </div>
-
-          <table className="w-full text-left border-t border-b border-slate-200 py-2">
-            <thead>
-              <tr className="text-slate-400 uppercase text-[10px]">
-                <th className="py-2">Item Description</th>
-                <th className="py-2 text-right">Amount (INR)</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {(order.items || []).map((it: any) => (
-                <tr key={it.courseId}>
-                  <td className="py-2 font-medium">{it.courseTitle}</td>
-                  <td className="py-2 text-right tabular-nums">₹{Number(it.price || it.price_at_purchase || 0).toLocaleString('en-IN')}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-
-          <div className="flex justify-between font-bold text-sm pt-2">
-            <span>Total Paid:</span>
-            <span className="tabular-nums">₹{Number(order.total || 0).toLocaleString('en-IN')}</span>
-          </div>
-
-          <div className="text-center text-[10px] text-slate-400 pt-4 border-t border-slate-100">
-            This is a computer-generated tax invoice for online education services rendered under Section 9(5) of the CGST Act.
-          </div>
-        </div>
-      </Modal>
+      />
     </div>
   );
 };

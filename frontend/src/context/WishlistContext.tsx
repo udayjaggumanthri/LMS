@@ -15,11 +15,18 @@ export const WishlistProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [wishlistCourseIds, setWishlistCourseIds] = useState<string[]>(() => {
     try {
       const saved = localStorage.getItem(WISHLIST_STORAGE_KEY);
-      if (saved) return JSON.parse(saved);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        const seeded = ['course-4', 'course-6', 'course-8'];
+        if (Array.isArray(parsed) && parsed.length === seeded.length && seeded.every((id, index) => parsed[index] === id)) {
+          return [];
+        }
+        return Array.isArray(parsed) ? parsed : [];
+      }
     } catch {
       // ignore
     }
-    return ['course-4', 'course-6', 'course-8'];
+    return [];
   });
 
   useEffect(() => {

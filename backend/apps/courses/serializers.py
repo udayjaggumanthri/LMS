@@ -6,10 +6,11 @@ class CategorySerializer(serializers.ModelSerializer):
     courseCount = serializers.IntegerField(source='course_count', read_only=True)
     iconName = serializers.CharField(source='icon_name', required=False, default='Code')
     semester = serializers.CharField(required=False, allow_blank=True, default='')
+    isTop = serializers.BooleanField(source='is_top', required=False)
 
     class Meta:
         model = Category
-        fields = ['id', 'name', 'slug', 'description', 'semester', 'subcategories', 'iconName', 'courseCount', 'order']
+        fields = ['id', 'name', 'slug', 'description', 'semester', 'subcategories', 'iconName', 'courseCount', 'order', 'isTop']
 
 
 class LectureResourceSerializer(serializers.ModelSerializer):
@@ -37,10 +38,32 @@ class SectionSerializer(serializers.ModelSerializer):
         fields = ['id', 'title', 'order', 'lectures']
 
 
+def serialize_teaching_team(course):
+    seen = set()
+    people = []
+    members = []
+    if getattr(course, 'instructor_id', None):
+        members.append(course.instructor)
+    members.extend(list(course.instructors.all()))
+    for user in members:
+        if user is None or user.id in seen:
+            continue
+        seen.add(user.id)
+        full = f'{user.first_name} {user.last_name}'.strip() or user.username
+        people.append({
+            'id': str(user.id),
+            'name': full,
+            'title': user.title or '',
+        })
+    return people
+
+
 class CourseListSerializer(serializers.ModelSerializer):
     categoryId = serializers.CharField(source='category_id')
     instructorId = serializers.CharField(source='instructor_id')
     instructor = UserSerializer(read_only=True)
+    instructors = serializers.SerializerMethodField()
+    instructorIds = serializers.SerializerMethodField()
     originalPrice = serializers.FloatField(source='original_price')
     isFree = serializers.BooleanField(source='is_free')
     reviewsCount = serializers.IntegerField(source='reviews_count')
@@ -55,11 +78,17 @@ class CourseListSerializer(serializers.ModelSerializer):
         model = Course
         fields = [
             'id', 'title', 'subtitle', 'slug', 'categoryId', 'subcategory',
-            'instructorId', 'instructor', 'price', 'originalPrice', 'isFree',
+            'instructorId', 'instructor', 'instructors', 'instructorIds', 'price', 'originalPrice', 'isFree',
             'rating', 'reviewsCount', 'studentCount', 'durationHours', 'durationWeeks',
             'lectureCount', 'level', 'language', 'lastUpdated', 'badges', 'thumbnail',
             'whatYouWillLearn', 'requirements', 'tags', 'settings', 'status', 'featured'
         ]
+
+    def get_instructors(self, obj):
+        return serialize_teaching_team(obj)
+
+    def get_instructorIds(self, obj):
+        return [person['id'] for person in serialize_teaching_team(obj)]
 
 
 class CourseDetailSerializer(serializers.ModelSerializer):
@@ -67,6 +96,8 @@ class CourseDetailSerializer(serializers.ModelSerializer):
     categoryName = serializers.CharField(source='category.name', read_only=True)
     instructorId = serializers.CharField(source='instructor_id')
     instructor = UserSerializer(read_only=True)
+    instructors = serializers.SerializerMethodField()
+    instructorIds = serializers.SerializerMethodField()
     originalPrice = serializers.FloatField(source='original_price')
     isFree = serializers.BooleanField(source='is_free')
     reviewsCount = serializers.IntegerField(source='reviews_count')
@@ -84,7 +115,7 @@ class CourseDetailSerializer(serializers.ModelSerializer):
         model = Course
         fields = [
             'id', 'title', 'subtitle', 'slug', 'categoryId', 'categoryName',
-            'subcategory', 'instructorId', 'instructor', 'price', 'originalPrice',
+            'subcategory', 'instructorId', 'instructor', 'instructors', 'instructorIds', 'price', 'originalPrice',
             'isFree', 'rating', 'reviewsCount', 'studentCount', 'durationHours',
             'durationWeeks', 'lectureCount', 'level', 'language', 'lastUpdated',
             'badges', 'thumbnail', 'previewVideoUrl', 'whatYouWillLearn', 'requirements',
@@ -92,16 +123,51 @@ class CourseDetailSerializer(serializers.ModelSerializer):
             'featured', 'review_feedback'
         ]
 
+    def get_instructors(self, obj):
+        return serialize_teaching_team(obj)
+
+    def get_instructorIds(self, obj):
+        return [person['id'] for person in serialize_teaching_team(obj)]
+
 
 class CourseCreateUpdateSerializer(serializers.ModelSerializer):
-    slug = serializers.SlugField(required=False)
+    slug = serializers.SlugField(required=False, allow_blank=True)
     curriculum = serializers.ListField(child=serializers.DictField(), required=False, write_only=True)
     categoryId = serializers.IntegerField(source='category_id', required=False, write_only=True)
+    thumbnail = serializers.CharField(required=False, allow_blank=True)
 
     class Meta:
         model = Course
         fields = '__all__'
         read_only_fields = ['id', 'instructor', 'rating', 'reviews_count', 'student_count', 'created_at', 'updated_at']
+
+    CAMEL_TO_SNAKE = {
+        'originalPrice': 'original_price',
+        'isFree': 'is_free',
+        'whatYouWillLearn': 'what_you_will_learn',
+        'targetAudience': 'target_audience',
+        'durationHours': 'duration_hours',
+        'durationWeeks': 'duration_weeks',
+        'lectureCount': 'lecture_count',
+        'previewVideoUrl': 'preview_video_url',
+    }
+
+    def to_internal_value(self, data):
+        incoming = data.copy() if hasattr(data, 'copy') else dict(data)
+        if hasattr(incoming, '_mutable'):
+            incoming._mutable = True
+        for camel, snake in self.CAMEL_TO_SNAKE.items():
+            if camel in incoming and snake not in incoming:
+                incoming[snake] = incoming[camel]
+        if incoming.get('categoryId') not in (None, ''):
+            try:
+                incoming['categoryId'] = int(incoming['categoryId'])
+                incoming['category'] = incoming['categoryId']
+            except (TypeError, ValueError):
+                raise serializers.ValidationError({'categoryId': 'Choose a saved category before publishing.'})
+        if incoming.get('thumbnail') in (None,):
+            incoming['thumbnail'] = ''
+        return super().to_internal_value(incoming)
 
     def create(self, validated_data):
         if not validated_data.get('slug'):
@@ -145,7 +211,7 @@ class CourseCreateUpdateSerializer(serializers.ModelSerializer):
                 dur = lec_data.get('durationMinutes', 10)
                 total_minutes += dur
                 total_lectures += 1
-                Lecture.objects.create(
+                lecture = Lecture.objects.create(
                     section=section,
                     title=lec_data.get('title', f'Lecture {lec_idx + 1}'),
                     duration_minutes=dur,
@@ -155,6 +221,19 @@ class CourseCreateUpdateSerializer(serializers.ModelSerializer):
                     content=lec_data.get('content', ''),
                     order=lec_idx
                 )
+                for resource in lec_data.get('resources') or []:
+                    if not isinstance(resource, dict):
+                        continue
+                    name = str(resource.get('name') or '').strip()
+                    url = str(resource.get('url') or '').strip()
+                    if not name or not url:
+                        continue
+                    LectureResource.objects.create(
+                        lecture=lecture,
+                        name=name[:255],
+                        size=str(resource.get('size') or '')[:50],
+                        url=url[:500],
+                    )
 
         course.lecture_count = total_lectures
         if total_minutes > 0:

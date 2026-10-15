@@ -18,6 +18,8 @@ import { Button } from '../../components/ui/Button';
 import { Badge } from '../../components/ui/Badge';
 import { Modal } from '../../components/ui/Modal';
 import { Course } from '../../types';
+import { CourseCover } from '../../components/courses/CourseCover';
+import { apiErrorMessage } from '../../api/client';
 
 export const AdminCourseReviewQueuePage: React.FC = () => {
   const { courses, updateCourseStatus } = useCourses();
@@ -40,21 +42,33 @@ export const AdminCourseReviewQueuePage: React.FC = () => {
     });
   }, [courses, statusFilter]);
 
-  const handleApprove = (courseId: string) => {
-    const course = courses.find(c => c.id === courseId);
-    updateCourseStatus(courseId, 'published');
-    showToast('success', `"${course?.title || 'Course'}" has been approved and published to the live marketplace!`);
+  const handleApprove = async (courseId: string) => {
+    const course = courses.find(c => String(c.id) === String(courseId));
+    try {
+      await updateCourseStatus(courseId, 'published');
+      showToast('success', `"${course?.title || 'Course'}" has been approved and published to the live marketplace!`);
+    } catch (err) {
+      showToast('error', apiErrorMessage(err, 'Could not publish this course.'));
+    }
   };
 
-  const handleRequestChanges = (e: React.FormEvent) => {
+  const handleRequestChanges = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!feedbackModalCourseId) return;
-    const course = courses.find(c => c.id === feedbackModalCourseId);
-    const feedback = feedbackNotes.trim() || 'Please add more hands-on code examples in Section 2.';
-    updateCourseStatus(feedbackModalCourseId, 'changes_requested', feedback);
-    showToast('warning', `Revisions requested for "${course?.title || 'Course'}". Instructor notified.`);
-    setFeedbackModalCourseId(null);
-    setFeedbackNotes('');
+    const course = courses.find(c => String(c.id) === String(feedbackModalCourseId));
+    const feedback = feedbackNotes.trim();
+    if (!feedback) {
+      showToast('error', 'Write the revision note before sending it.');
+      return;
+    }
+    try {
+      await updateCourseStatus(feedbackModalCourseId, 'changes_requested', feedback);
+      showToast('warning', `Revisions requested for "${course?.title || 'Course'}".`);
+      setFeedbackModalCourseId(null);
+      setFeedbackNotes('');
+    } catch (err) {
+      showToast('error', apiErrorMessage(err, 'Could not save the revision request.'));
+    }
   };
 
   return (
@@ -155,11 +169,15 @@ export const AdminCourseReviewQueuePage: React.FC = () => {
               className="p-6 border border-slate-200 rounded-lg bg-white flex flex-col md:flex-row items-start justify-between gap-6 text-xs hover:border-slate-300 transition-all shadow-xs"
             >
               <div className="flex items-start gap-4 flex-1">
-                <img
-                  src={course.thumbnail}
-                  alt={course.title}
-                  className="w-28 aspect-video rounded object-cover border border-slate-200 shrink-0"
-                />
+                <div className="w-28 aspect-video rounded overflow-hidden border border-slate-200 shrink-0">
+                  <CourseCover
+                    title={course.title}
+                    category={course.subcategory}
+                    categoryId={course.categoryId}
+                    thumbnail={course.thumbnail}
+                    size="sm"
+                  />
+                </div>
                 <div className="space-y-1.5 min-w-0">
                   <div className="flex items-center gap-2">
                     <Badge variant={course.status === 'in_review' ? 'warning' : 'danger'}>

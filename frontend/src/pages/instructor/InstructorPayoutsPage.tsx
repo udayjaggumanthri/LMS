@@ -17,14 +17,14 @@ export const InstructorPayoutsPage: React.FC = () => {
   const [payoutAmount, setPayoutAmount] = useState<number>(45000);
   const [payoutMethodChoice, setPayoutMethodChoice] = useState<'upi' | 'bank'>('upi');
   const [upiId, setUpiId] = useState(currentUser?.payoutMethod?.upiId || 'neha.ts@paytm');
-  const [bankAcc, setBankAcc] = useState(currentUser?.payoutMethod?.accountNumber || '918237461928');
-  const [ifsc, setIfsc] = useState(currentUser?.payoutMethod?.ifsc || 'HDFC0001824');
+  const [bankAcc, setBankAcc] = useState(currentUser?.payoutMethod?.accountNumber || '');
+  const [ifsc, setIfsc] = useState(currentUser?.payoutMethod?.ifsc || '');
   const [requestSuccessMsg, setRequestSuccessMsg] = useState(false);
 
-  const myPayouts = payoutRequests.filter(p => p.instructorId === currentUser?.id || p.instructorId === 'inst-7');
+  const myPayouts = payoutRequests.filter(p => currentUser?.id && p.instructorId === currentUser.id);
 
-  const lifetimeEarnings = currentUser?.totalEarnings || 980000;
-  const availableBalance = 142000;
+  const lifetimeEarnings = currentUser?.totalEarnings || 0;
+  const availableBalance = lifetimeEarnings;
   const platformFeeCovered = Math.round(lifetimeEarnings * 0.176);
 
   const handleRequestPayout = (e: React.FormEvent) => {
@@ -33,9 +33,9 @@ export const InstructorPayoutsPage: React.FC = () => {
     requestPayout(
       payoutAmount,
       methodStr,
-      currentUser?.id || 'inst-7',
-      currentUser?.name || 'Neha Deshmukh',
-      currentUser?.email || 'instructor@prajnadhara.edu'
+      currentUser?.id || '',
+      currentUser?.name || '',
+      currentUser?.email || ''
     );
     setRequestSuccessMsg(true);
   };

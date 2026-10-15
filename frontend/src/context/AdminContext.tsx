@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { InstructorApplication, PayoutRequest, Coupon } from '../types';
 import { adminService } from '../api/adminService';
 
@@ -14,167 +14,166 @@ interface AdminContextType {
   payoutRequests: PayoutRequest[];
   coupons: Coupon[];
   settings: PlatformSettings;
-  submitInstructorApplication: (app: Omit<InstructorApplication, 'id' | 'status' | 'submittedAt'>) => void;
-  approveInstructorApplication: (id: string) => void;
-  rejectInstructorApplication: (id: string, feedback?: string) => void;
-  requestPayout: (amount: number, method: string, instructorId: string, instructorName: string, instructorEmail: string) => void;
-  approvePayout: (id: string) => void;
-  rejectPayout: (id: string) => void;
-  createCoupon: (coupon: Omit<Coupon, 'id' | 'usedCount'>) => void;
-  toggleCouponActive: (id: string) => void;
-  updateSettings: (newSettings: Partial<PlatformSettings>) => void;
+  submitInstructorApplication: (app: Omit<InstructorApplication, 'id' | 'status' | 'submittedAt'>) => Promise<void>;
+  approveInstructorApplication: (id: string) => Promise<void>;
+  rejectInstructorApplication: (id: string, feedback?: string) => Promise<void>;
+  requestPayout: (amount: number, method: string, instructorId: string, instructorName: string, instructorEmail: string) => Promise<void>;
+  approvePayout: (id: string) => Promise<void>;
+  rejectPayout: (id: string) => Promise<void>;
+  createCoupon: (coupon: Omit<Coupon, 'id' | 'usedCount'>) => Promise<void>;
+  toggleCouponActive: (id: string) => Promise<void>;
+  updateSettings: (newSettings: Partial<PlatformSettings>) => Promise<void>;
+  reloadAdmin: () => Promise<void>;
 }
 
 const AdminContext = createContext<AdminContextType | undefined>(undefined);
 
-const APPS_STORAGE_KEY = 'prajnadhara_instructor_apps_v1';
-const PAYOUTS_STORAGE_KEY = 'prajnadhara_payouts_v1';
-const COUPONS_STORAGE_KEY = 'prajnadhara_coupons_admin_v1';
-const SETTINGS_STORAGE_KEY = 'prajnadhara_settings_v1';
+const EMPTY_SETTINGS: PlatformSettings = {
+  commissionPercent: 30,
+  platformName: 'PrajnadharaEdu',
+  supportEmail: '',
+  minPayoutThreshold: 0,
+};
+
+function mapApplication(a: any): InstructorApplication {
+  return {
+    id: String(a.id),
+    userId: String(a.user || a.userId || ''),
+    applicantName: a.applicant_name || a.applicantName || 'Applicant',
+    email: a.email || '',
+    expertise: a.expertise || '',
+    experienceBio: a.experience_bio || a.experienceBio || '',
+    sampleTopic: a.sample_topic || a.sampleTopic || '',
+    linkedinOrPortfolio: a.linkedin_or_portfolio || a.linkedinOrPortfolio || '',
+    status: a.status || 'pending',
+    submittedAt: a.created_at ? String(a.created_at).slice(0, 10) : '',
+    adminFeedback: a.admin_feedback || a.adminFeedback || '',
+  };
+}
+
+function mapPayout(p: any): PayoutRequest {
+  return {
+    id: String(p.id),
+    instructorId: String(p.instructorId || p.instructor_id || ''),
+    instructorName: p.instructorName || '',
+    instructorEmail: p.instructorEmail || '',
+    amount: Number(p.amount),
+    method: p.method,
+    status: p.status,
+    requestedAt: p.requestedAt || '',
+    processedAt: p.processedAt || undefined,
+  };
+}
 
 export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [instructorApplications, setInstructorApplications] = useState<InstructorApplication[]>(() => {
-    try {
-      const saved = localStorage.getItem(APPS_STORAGE_KEY);
-      if (saved) return JSON.parse(saved);
-    } catch {
-      // ignore
-    }
-    return [];
-  });
+  const [instructorApplications, setInstructorApplications] = useState<InstructorApplication[]>([]);
+  const [payoutRequests, setPayoutRequests] = useState<PayoutRequest[]>([]);
+  const [coupons, setCoupons] = useState<Coupon[]>([]);
+  const [settings, setSettings] = useState<PlatformSettings>(EMPTY_SETTINGS);
 
-  const [payoutRequests, setPayoutRequests] = useState<PayoutRequest[]>(() => {
-    try {
-      const saved = localStorage.getItem(PAYOUTS_STORAGE_KEY);
-      if (saved) return JSON.parse(saved);
-    } catch {
-      // ignore
+  const reloadAdmin = useCallback(async () => {
+    const token = localStorage.getItem('prajnadhara_token');
+    if (!token) {
+      setInstructorApplications([]);
+      setPayoutRequests([]);
+      setCoupons([]);
+      return;
     }
-    return [];
-  });
-
-  const [coupons, setCoupons] = useState<Coupon[]>(() => {
-    try {
-      const saved = localStorage.getItem(COUPONS_STORAGE_KEY);
-      if (saved) return JSON.parse(saved);
-    } catch {
-      // ignore
+    const [apps, payoutRows, couponRows, platform] = await Promise.all([
+      adminService.getInstructorApplications().catch(() => []),
+      adminService.getPayouts().catch(() => adminService.getMyPayouts().catch(() => [])),
+      adminService.getCoupons().catch(() => []),
+      adminService.getPlatformSettings().catch(() => null),
+    ]);
+    setInstructorApplications(Array.isArray(apps) ? apps.map(mapApplication) : []);
+    setPayoutRequests(Array.isArray(payoutRows) ? payoutRows.map(mapPayout) : []);
+    setCoupons(Array.isArray(couponRows) ? couponRows : []);
+    if (platform) {
+      setSettings({
+        commissionPercent: Number(platform.platformFeePercent ?? platform.platform_fee_percent ?? 30),
+        platformName: platform.platformName || platform.platform_name || 'PrajnadharaEdu',
+        supportEmail: platform.supportEmail || platform.support_email || '',
+        minPayoutThreshold: 0,
+      });
     }
-    return [];
-  });
-
-  const [settings, setSettings] = useState<PlatformSettings>(() => {
-    try {
-      const saved = localStorage.getItem(SETTINGS_STORAGE_KEY);
-      if (saved) return JSON.parse(saved);
-    } catch {
-      // ignore
-    }
-    return {
-      commissionPercent: 15,
-      platformName: 'PrajnadharaEdu',
-      supportEmail: 'support@prajnadhara.edu',
-      minPayoutThreshold: 1000
-    };
-  });
-
-  // Fetch real applications from backend
-  useEffect(() => {
-    adminService.getInstructorApplications()
-      .then((data) => {
-        if (data && Array.isArray(data)) {
-          const mapped: InstructorApplication[] = data.map((a: any) => ({
-            id: String(a.id),
-            userId: String(a.user || a.userId || a.id),
-            applicantName: a.applicant_name || a.applicantName || (a.user_details ? `${a.user_details.first_name} ${a.user_details.last_name}` : 'Applicant'),
-            email: a.email || a.user_details?.email || '',
-            expertise: a.expertise || a.sample_topic || 'Engineering',
-            experienceBio: a.experience_bio || a.experienceBio || '',
-            sampleTopic: a.sample_topic || a.sampleTopic || '',
-            linkedinOrPortfolio: a.portfolio_url || a.portfolioUrl,
-            status: a.status || 'pending',
-            submittedAt: a.created_at ? new Date(a.created_at).toISOString().split('T')[0] : '2026-10-09',
-            adminFeedback: a.admin_feedback || a.adminFeedback
-          }));
-          setInstructorApplications(mapped);
-        }
-      })
-      .catch(() => {});
   }, []);
 
   useEffect(() => {
-    localStorage.setItem(APPS_STORAGE_KEY, JSON.stringify(instructorApplications));
-  }, [instructorApplications]);
+    ['prajnadhara_instructor_apps_v1', 'prajnadhara_payouts_v1', 'prajnadhara_coupons_admin_v1', 'prajnadhara_settings_v1'].forEach((key) => {
+      localStorage.removeItem(key);
+    });
+    reloadAdmin().catch(() => undefined);
+  }, [reloadAdmin]);
 
-  useEffect(() => {
-    localStorage.setItem(PAYOUTS_STORAGE_KEY, JSON.stringify(payoutRequests));
-  }, [payoutRequests]);
-
-  useEffect(() => {
-    localStorage.setItem(COUPONS_STORAGE_KEY, JSON.stringify(coupons));
-  }, [coupons]);
-
-  useEffect(() => {
-    localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(settings));
-  }, [settings]);
-
-  const submitInstructorApplication = (appData: Omit<InstructorApplication, 'id' | 'status' | 'submittedAt'>) => {
-    const newApp: InstructorApplication = {
-      ...appData,
-      id: `app-${Date.now()}`,
-      status: 'pending',
-      submittedAt: new Date().toISOString().split('T')[0]
-    };
-    setInstructorApplications(prev => [newApp, ...prev]);
+  const submitInstructorApplication = async (appData: Omit<InstructorApplication, 'id' | 'status' | 'submittedAt'>) => {
+    const saved = await adminService.submitInstructorApplication({
+      applicant_name: appData.applicantName,
+      email: appData.email,
+      expertise: appData.expertise,
+      experience_bio: appData.experienceBio,
+      sample_topic: appData.sampleTopic,
+      linkedin_or_portfolio: appData.linkedinOrPortfolio || '',
+    });
+    setInstructorApplications((prev) => [mapApplication(saved), ...prev]);
   };
 
-  const approveInstructorApplication = (id: string) => {
-    setInstructorApplications(prev => prev.map(a => a.id === id ? { ...a, status: 'approved' } : a));
-    adminService.updateApplicationStatus(id, 'approved', 'Approved by administrator.').catch(() => {});
+  const approveInstructorApplication = async (id: string) => {
+    await adminService.updateApplicationStatus(id, 'approved', 'Approved by administrator.');
+    setInstructorApplications((prev) => prev.map((a) => (String(a.id) === String(id) ? { ...a, status: 'approved' } : a)));
   };
 
-  const rejectInstructorApplication = (id: string, feedback?: string) => {
-    setInstructorApplications(prev => prev.map(a => a.id === id ? { ...a, status: 'rejected', adminFeedback: feedback } : a));
-    adminService.updateApplicationStatus(id, 'rejected', feedback || 'Application does not meet current criteria.').catch(() => {});
+  const rejectInstructorApplication = async (id: string, feedback?: string) => {
+    const note = feedback || 'Application does not meet current criteria.';
+    await adminService.updateApplicationStatus(id, 'rejected', note);
+    setInstructorApplications((prev) => prev.map((a) => (String(a.id) === String(id) ? { ...a, status: 'rejected', adminFeedback: note } : a)));
   };
 
-  const requestPayout = (amount: number, method: string, instructorId: string, instructorName: string, instructorEmail: string) => {
-    const newPayout: PayoutRequest = {
-      id: `pay-${Date.now()}`,
-      instructorId,
-      instructorName,
-      instructorEmail,
-      amount,
-      method,
-      status: 'pending',
-      requestedAt: new Date().toISOString().split('T')[0]
-    };
-    setPayoutRequests(prev => [newPayout, ...prev]);
+  const requestPayout = async (amount: number, method: string) => {
+    const saved = await adminService.requestPayout({ amount, method });
+    setPayoutRequests((prev) => [mapPayout(saved), ...prev]);
   };
 
-  const approvePayout = (id: string) => {
-    setPayoutRequests(prev => prev.map(p => p.id === id ? { ...p, status: 'completed', processedAt: new Date().toISOString().split('T')[0] } : p));
+  const approvePayout = async (id: string) => {
+    const saved = await adminService.actOnPayout(id, 'approve');
+    setPayoutRequests((prev) => prev.map((p) => (String(p.id) === String(id) ? mapPayout(saved) : p)));
   };
 
-  const rejectPayout = (id: string) => {
-    setPayoutRequests(prev => prev.map(p => p.id === id ? { ...p, status: 'rejected', processedAt: new Date().toISOString().split('T')[0] } : p));
+  const rejectPayout = async (id: string) => {
+    const saved = await adminService.actOnPayout(id, 'reject');
+    setPayoutRequests((prev) => prev.map((p) => (String(p.id) === String(id) ? mapPayout(saved) : p)));
   };
 
-  const createCoupon = (couponData: Omit<Coupon, 'id' | 'usedCount'>) => {
-    const newCoupon: Coupon = {
-      ...couponData,
-      id: `coup-${Date.now()}`,
-      usedCount: 0
-    };
-    setCoupons(prev => [newCoupon, ...prev]);
+  const createCoupon = async (couponData: Omit<Coupon, 'id' | 'usedCount'>) => {
+    const saved = await adminService.createCoupon({
+      code: couponData.code,
+      discountPercent: couponData.discountPercent,
+      maxUses: couponData.maxUses,
+      expiresAt: couponData.expiresAt,
+      active: couponData.active,
+    });
+    setCoupons((prev) => [saved, ...prev]);
   };
 
-  const toggleCouponActive = (id: string) => {
-    setCoupons(prev => prev.map(c => c.id === id ? { ...c, active: !c.active } : c));
+  const toggleCouponActive = async (id: string) => {
+    const current = coupons.find((c) => String(c.id) === String(id));
+    if (!current) return;
+    const saved = await adminService.updateCoupon(id, { active: !current.active });
+    setCoupons((prev) => prev.map((c) => (String(c.id) === String(id) ? saved : c)));
   };
 
-  const updateSettings = (newSettings: Partial<PlatformSettings>) => {
-    setSettings(prev => ({ ...prev, ...newSettings }));
+  const updateSettings = async (newSettings: Partial<PlatformSettings>) => {
+    const saved = await adminService.updatePlatformSettings({
+      platformName: newSettings.platformName ?? settings.platformName,
+      supportEmail: newSettings.supportEmail ?? settings.supportEmail,
+      platformFeePercent: newSettings.commissionPercent ?? settings.commissionPercent,
+    });
+    setSettings((prev) => ({
+      ...prev,
+      ...newSettings,
+      platformName: saved.platformName || prev.platformName,
+      supportEmail: saved.supportEmail || prev.supportEmail,
+      commissionPercent: Number(saved.platformFeePercent ?? prev.commissionPercent),
+    }));
   };
 
   return (
@@ -192,7 +191,8 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         rejectPayout,
         createCoupon,
         toggleCouponActive,
-        updateSettings
+        updateSettings,
+        reloadAdmin,
       }}
     >
       {children}

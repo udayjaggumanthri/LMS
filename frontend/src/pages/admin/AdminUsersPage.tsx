@@ -18,10 +18,13 @@ import { useNotifications } from '../../context/NotificationContext';
 import { Table, Column } from '../../components/ui/Table';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
+import { PasswordInput } from '../../components/ui/PasswordInput';
+import { Avatar } from '../../components/ui/Avatar';
 import { Modal } from '../../components/ui/Modal';
 import { Badge } from '../../components/ui/Badge';
 import { UserRole } from '../../types';
 import { adminService } from '../../api/adminService';
+import { apiErrorMessage } from '../../api/client';
 
 interface UnifiedUser {
   id: string;
@@ -48,7 +51,7 @@ export const AdminUsersPage: React.FC = () => {
           name: u.name || `${u.first_name || ''} ${u.last_name || ''}`.trim() || u.username,
           email: u.email,
           role: u.role || 'student',
-          avatar: u.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=200',
+          avatar: u.avatar || '/empty-cover.svg',
           enrolledCount: u.enrolled_count || 0,
           joinedDate: u.joinedAt || (u.date_joined ? new Date(u.date_joined).toISOString().split('T')[0] : '2026-10-09')
         }));
@@ -67,10 +70,11 @@ export const AdminUsersPage: React.FC = () => {
   // Invite Form State
   const [inviteName, setInviteName] = useState('');
   const [inviteEmail, setInviteEmail] = useState('');
+  const [invitePassword, setInvitePassword] = useState('');
   const [inviteRole, setInviteRole] = useState<UserRole>('student');
 
   // Bulk CSV Import State
-  const defaultCsvSample = `name,email,role\nRohit Sen,rohit.sen@example.com,student\nSneha Kapoor,sneha.kapoor@example.com,instructor\nTanmay Rao,tanmay.rao@example.com,student`;
+  const defaultCsvSample = 'name,email,role,password';
   const [csvText, setCsvText] = useState(defaultCsvSample);
   const [csvPreviewRows, setCsvPreviewRows] = useState<any[]>([]);
 
@@ -91,79 +95,106 @@ export const AdminUsersPage: React.FC = () => {
     });
   }, [usersList, roleFilter, searchTerm]);
 
-  const handleInviteUser = (e: React.FormEvent) => {
+  const handleInviteUser = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!inviteName.trim() || !inviteEmail.trim()) {
-      showToast('error', 'Name and Email are required.');
+    if (!inviteName.trim() || !inviteEmail.trim() || !invitePassword.trim()) {
+      showToast('error', 'Name, email, and a password of at least 8 characters are required.');
       return;
     }
-    const newUser: UnifiedUser = {
-      id: `user-${Date.now()}`,
-      name: inviteName.trim(),
-      email: inviteEmail.trim(),
-      role: inviteRole,
-      avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150',
-      enrolledCount: 0,
-      joinedDate: new Date().toISOString().split('T')[0]
-    };
-    setUsersList(prev => [newUser, ...prev]);
-    showToast('success', `Created account for ${inviteName.trim()} (${inviteRole})`);
-    setInviteName('');
-    setInviteEmail('');
-    setInviteModalOpen(false);
+    try {
+      const saved = await adminService.createUser({
+        name: inviteName.trim(),
+        email: inviteEmail.trim(),
+        password: invitePassword.trim(),
+        role: inviteRole,
+      });
+      const newUser: UnifiedUser = {
+        id: String(saved.id),
+        name: saved.name || inviteName.trim(),
+        email: saved.email,
+        role: saved.role,
+        avatar: saved.avatar || '',
+        enrolledCount: 0,
+        joinedDate: saved.joinedAt || new Date().toISOString().split('T')[0]
+      };
+      setUsersList(prev => [newUser, ...prev]);
+      showToast('success', `Created account for ${inviteName.trim()} (${inviteRole})`);
+      setInviteName('');
+      setInviteEmail('');
+      setInvitePassword('');
+      setInviteModalOpen(false);
+    } catch (err) {
+      showToast('error', apiErrorMessage(err, 'Could not create this user.'));
+    }
   };
 
   const handleParseCsv = () => {
     const lines = csvText.trim().split('\n');
     const rows: any[] = [];
     lines.slice(1).forEach((line, idx) => {
-      const [name, email, role] = line.split(',').map(s => s.trim());
-      const isValid = name && email && email.includes('@') && ['student', 'instructor', 'admin'].includes(role);
+      const [name, email, role, password] = line.split(',').map(s => s.trim());
+      const isValid = name && email && email.includes('@') && ['student', 'instructor', 'admin'].includes(role) && password && password.length >= 8;
       rows.push({
         id: `row-${idx}`,
         name: name || '',
         email: email || '',
         role: (role as UserRole) || 'student',
         valid: isValid,
-        error: !isValid ? 'Invalid format or email' : null
+        password: password || '',
+        error: !isValid ? 'Name, email, role, and a password of at least 8 characters are required' : null
       });
     });
     setCsvPreviewRows(rows);
   };
 
-  const handleConfirmCsvImport = () => {
-    const validUsers: UnifiedUser[] = csvPreviewRows
-      .filter(r => r.valid)
-      .map(r => ({
-        id: `user-${Date.now()}-${Math.random().toString(36).substring(7)}`,
-        name: r.name,
-        email: r.email,
-        role: r.role,
-        avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150',
-        joinedDate: new Date().toISOString().split('T')[0]
-      }));
-
-    setUsersList(prev => [...validUsers, ...prev]);
-    showToast('success', `Successfully imported ${validUsers.length} users into directory.`);
+  const handleConfirmCsvImport = async () => {
+    const validRows = csvPreviewRows.filter(r => r.valid);
+    const created: UnifiedUser[] = [];
+    for (const row of validRows) {
+      const saved = await adminService.createUser({
+        name: row.name,
+        email: row.email,
+        password: row.password,
+        role: row.role,
+      });
+      created.push({
+        id: String(saved.id),
+        name: saved.name || row.name,
+        email: saved.email,
+        role: saved.role,
+        avatar: saved.avatar || '',
+        joinedDate: saved.joinedAt || new Date().toISOString().split('T')[0]
+      });
+    }
+    setUsersList(prev => [...created, ...prev]);
+    showToast('success', `Imported ${created.length} users.`);
     setBulkCsvModalOpen(false);
     setCsvPreviewRows([]);
   };
 
-  const handleSaveRoleChange = (e: React.FormEvent) => {
+  const handleSaveRoleChange = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editRoleUser) return;
-    setUsersList(prev => prev.map(u => u.id === editRoleUser.id ? { ...u, role: newRoleForUser } : u));
-    adminService.updateUser(editRoleUser.id, { role: newRoleForUser }).catch(() => {});
-    showToast('success', `Updated ${editRoleUser.name}'s role to ${newRoleForUser}.`);
-    setEditRoleUser(null);
+    try {
+      await adminService.updateUser(editRoleUser.id, { role: newRoleForUser });
+      setUsersList(prev => prev.map(u => u.id === editRoleUser.id ? { ...u, role: newRoleForUser } : u));
+      showToast('success', `Updated ${editRoleUser.name}'s role to ${newRoleForUser}.`);
+      setEditRoleUser(null);
+    } catch (err) {
+      showToast('error', apiErrorMessage(err, 'Could not update this role.'));
+    }
   };
 
-  const handleConfirmDelete = () => {
+  const handleConfirmDelete = async () => {
     if (!deleteConfirmUser) return;
-    setUsersList(prev => prev.filter(u => u.id !== deleteConfirmUser.id));
-    adminService.deleteUser(deleteConfirmUser.id).catch(() => {});
-    showToast('info', `Account for ${deleteConfirmUser.name} removed.`);
-    setDeleteConfirmUser(null);
+    try {
+      await adminService.deleteUser(deleteConfirmUser.id);
+      setUsersList(prev => prev.filter(u => u.id !== deleteConfirmUser.id));
+      showToast('info', `Account for ${deleteConfirmUser.name} removed.`);
+      setDeleteConfirmUser(null);
+    } catch (err) {
+      showToast('error', apiErrorMessage(err, 'Could not delete this account.'));
+    }
   };
 
   const columns: Column<UnifiedUser>[] = [
@@ -172,11 +203,7 @@ export const AdminUsersPage: React.FC = () => {
       header: 'User Account',
       render: (u) => (
         <div className="flex items-center gap-3">
-          <img
-            src={u.avatar}
-            alt={u.name}
-            className="w-8 h-8 rounded-full object-cover border border-slate-200"
-          />
+          <Avatar name={u.name} size="sm" />
           <div>
             <div className="font-bold text-slate-900">{u.name}</div>
             <div className="text-[11px] text-slate-500">{u.email}</div>
@@ -389,6 +416,13 @@ export const AdminUsersPage: React.FC = () => {
             value={inviteEmail}
             onChange={(e) => setInviteEmail(e.target.value)}
             placeholder="anand@example.com"
+          />
+          <PasswordInput
+            label="Password"
+            required
+            value={invitePassword}
+            onChange={(e) => setInvitePassword(e.target.value)}
+            placeholder="At least 8 characters"
           />
           <div>
             <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-1.5">

@@ -21,21 +21,15 @@ import {
   Menu,
   X,
   Compass,
-  ExternalLink,
-  ChevronRight,
   Layers,
   Image,
   Mail,
-  CreditCard,
-  Banknote
+  CreditCard
 } from 'lucide-react';
 import { Logo } from '../common/Logo';
+import { Avatar } from '../ui/Avatar';
 import { useAuth } from '../../context/AuthContext';
 import { useNotifications } from '../../context/NotificationContext';
-import { useCourse } from '../../context/CourseContext';
-import { useAdmin } from '../../context/AdminContext';
-import { UserRole } from '../../types';
-
 interface NavItem {
   label: string;
   to: string;
@@ -51,8 +45,6 @@ interface NavSection {
 export const AppLayout: React.FC = () => {
   const { currentUser, currentRole, isAuthenticated, logout } = useAuth();
   const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications();
-  const { courses } = useCourse();
-  const { instructorApplications } = useAdmin();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
   const location = useLocation();
@@ -78,99 +70,55 @@ export const AppLayout: React.FC = () => {
     return <Navigate to="/signin" replace />;
   }
 
-  const pendingApps = instructorApplications?.filter(a => a.status === 'pending').length || 0;
-  const pendingReviews = courses?.filter(c => c.status === 'in_review' || (c.status as any) === 'review_pending').length || 0;
-
   const adminSections: NavSection[] = [
     {
-      title: 'Platform Control',
+      title: '',
       items: [
-        { label: 'Admin Overview', to: '/admin/dashboard', icon: <LayoutDashboard className="w-4 h-4" /> },
-        { label: 'Financial Reports', to: '/admin/reports', icon: <TrendingUp className="w-4 h-4" /> }
-      ]
-    },
-    {
-      title: 'Academics & Catalog',
-      items: [
-        { label: 'Course Catalog', to: '/admin/courses', icon: <BookOpen className="w-4 h-4" /> },
-        { label: 'Course Review Queue', to: '/admin/course-reviews', icon: <ShieldAlert className="w-4 h-4" />, badge: pendingReviews > 0 ? pendingReviews : undefined },
-        { label: 'Semester Taxonomy', to: '/admin/categories', icon: <FolderTree className="w-4 h-4" /> }
-      ]
-    },
-    {
-      title: 'Users & Faculty',
-      items: [
-        { label: 'Users Directory', to: '/admin/users', icon: <Users className="w-4 h-4" /> },
-        { label: 'Instructor Applications', to: '/admin/instructor-applications', icon: <FileText className="w-4 h-4" />, badge: pendingApps > 0 ? pendingApps : undefined }
-      ]
-    },
-    {
-      title: 'Content & Media',
-      items: [
-        { label: 'Blog Posts & Articles', to: '/admin/blogs', icon: <FileText className="w-4 h-4" /> },
-        { label: 'Media Library', to: '/admin/media-library', icon: <Image className="w-4 h-4" /> },
-        { label: 'Visual Page Editor', to: '/admin/page-editor', icon: <Layers className="w-4 h-4" /> }
-      ]
-    },
-    {
-      title: 'Commerce & Orders',
-      items: [
-        { label: 'Orders & Invoices', to: '/admin/orders-refunds', icon: <DollarSign className="w-4 h-4" /> },
-        { label: 'Instructor Payouts', to: '/admin/payouts', icon: <Banknote className="w-4 h-4" /> },
-        { label: 'Payment Gateway (Toucan)', to: '/admin/payment-gateway', icon: <CreditCard className="w-4 h-4" /> },
-        { label: 'Coupons & Promos', to: '/admin/coupons', icon: <Ticket className="w-4 h-4" /> }
-      ]
-    },
-    {
-      title: 'System & Governance',
-      items: [
-        { label: 'Mail SMTP Settings', to: '/admin/smtp', icon: <Mail className="w-4 h-4" /> },
-        { label: 'Platform Settings', to: '/admin/settings', icon: <Settings className="w-4 h-4" /> }
+        { label: 'Dashboard', to: '/admin/dashboard', icon: <LayoutDashboard className="w-4 h-4" /> },
+        { label: 'Reports', to: '/admin/reports', icon: <TrendingUp className="w-4 h-4" /> },
+        { label: 'Courses', to: '/admin/courses', icon: <BookOpen className="w-4 h-4" /> },
+        { label: 'Reviews', to: '/admin/course-reviews', icon: <ShieldAlert className="w-4 h-4" /> },
+        { label: 'Categories', to: '/admin/categories', icon: <FolderTree className="w-4 h-4" /> },
+        { label: 'Students', to: '/admin/users', icon: <Users className="w-4 h-4" /> },
+        { label: 'Applications', to: '/admin/instructor-applications', icon: <FileText className="w-4 h-4" /> },
+        { label: 'Blog', to: '/admin/blogs', icon: <FileText className="w-4 h-4" /> },
+        { label: 'Media', to: '/admin/media-library', icon: <Image className="w-4 h-4" /> },
+        { label: 'Pages', to: '/admin/page-editor', icon: <Layers className="w-4 h-4" /> },
+        { label: 'Orders', to: '/admin/orders-refunds', icon: <DollarSign className="w-4 h-4" /> },
+        { label: 'Payments', to: '/admin/payment-gateway', icon: <CreditCard className="w-4 h-4" /> },
+        { label: 'Coupons', to: '/admin/coupons', icon: <Ticket className="w-4 h-4" /> },
+        { label: 'Mail', to: '/admin/smtp', icon: <Mail className="w-4 h-4" /> },
+        { label: 'Templates', to: '/admin/mail-templates', icon: <Bell className="w-4 h-4" /> },
+        { label: 'Settings', to: '/admin/settings', icon: <Settings className="w-4 h-4" /> }
       ]
     }
   ];
 
   const instructorSections: NavSection[] = [
     {
-      title: 'Teaching Studio',
+      title: '',
       items: [
-        { label: 'Studio Dashboard', to: '/instructor/dashboard', icon: <LayoutDashboard className="w-4 h-4" /> },
-        { label: 'My Courses', to: '/instructor/courses', icon: <BookOpen className="w-4 h-4" /> },
-        { label: 'Create New Course', to: '/instructor/courses/new', icon: <PlusCircle className="w-4 h-4" /> }
-      ]
-    },
-    {
-      title: 'Learners & Interaction',
-      items: [
-        { label: 'Enrolled Students', to: '/instructor/students', icon: <Users className="w-4 h-4" /> },
-        { label: 'Q&A Inbox', to: '/instructor/qa', icon: <MessageSquare className="w-4 h-4" /> },
-        { label: 'Student Reviews', to: '/instructor/reviews', icon: <Star className="w-4 h-4" /> }
-      ]
-    },
-    {
-      title: 'Analytics & Profile',
-      items: [
-        { label: 'Course Analytics', to: '/instructor/analytics', icon: <TrendingUp className="w-4 h-4" /> },
-        { label: 'Earnings & Payouts', to: '/instructor/payouts', icon: <Banknote className="w-4 h-4" /> },
-        { label: 'Instructor Profile', to: '/instructor/profile', icon: <UserIcon className="w-4 h-4" /> }
+        { label: 'Dashboard', to: '/instructor/dashboard', icon: <LayoutDashboard className="w-4 h-4" /> },
+        { label: 'Courses', to: '/instructor/courses', icon: <BookOpen className="w-4 h-4" /> },
+        { label: 'New course', to: '/instructor/courses/new', icon: <PlusCircle className="w-4 h-4" /> },
+        { label: 'Students', to: '/instructor/students', icon: <Users className="w-4 h-4" /> },
+        { label: 'Questions', to: '/instructor/qa', icon: <MessageSquare className="w-4 h-4" /> },
+        { label: 'Reviews', to: '/instructor/reviews', icon: <Star className="w-4 h-4" /> },
+        { label: 'Analytics', to: '/instructor/analytics', icon: <TrendingUp className="w-4 h-4" /> },
+        { label: 'Profile', to: '/instructor/profile', icon: <UserIcon className="w-4 h-4" /> }
       ]
     }
   ];
 
   const studentSections: NavSection[] = [
     {
-      title: 'My Academics',
+      title: '',
       items: [
-        { label: 'My Learning', to: '/student/my-learning', icon: <BookOpen className="w-4 h-4" /> },
-        { label: 'Browse Catalog', to: '/courses', icon: <Compass className="w-4 h-4" /> },
-        { label: 'Certificates', to: '/student/certificates', icon: <Award className="w-4 h-4" /> }
-      ]
-    },
-    {
-      title: 'Account & Billing',
-      items: [
-        { label: 'Purchase History', to: '/student/orders', icon: <DollarSign className="w-4 h-4" /> },
-        { label: 'Account Settings', to: '/student/account', icon: <Settings className="w-4 h-4" /> }
+        { label: 'My learning', to: '/student/my-learning', icon: <BookOpen className="w-4 h-4" /> },
+        { label: 'Catalog', to: '/courses', icon: <Compass className="w-4 h-4" /> },
+        { label: 'Certificates', to: '/student/certificates', icon: <Award className="w-4 h-4" /> },
+        { label: 'Purchases', to: '/student/orders', icon: <DollarSign className="w-4 h-4" /> },
+        { label: 'Account', to: '/student/account', icon: <Settings className="w-4 h-4" /> }
       ]
     }
   ];
@@ -182,11 +130,39 @@ export const AppLayout: React.FC = () => {
       ? instructorSections
       : studentSections;
 
-  const roleTitles = {
-    student: 'Student Workspace',
-    instructor: 'Instructor Studio',
-    admin: 'Platform Admin Center'
-  };
+  const pageRules: [RegExp, string][] = [
+    [/\/lessons\/new$/, 'New lesson'],
+    [/\/lessons\//, 'Lesson'],
+    [/\/courses\/new$/, 'New course'],
+    [/\/courses\/[^/]+\/edit$/, 'Edit course'],
+    [/\/course-reviews$/, 'Reviews'],
+    [/\/categories$/, 'Categories'],
+    [/\/instructor-applications$/, 'Applications'],
+    [/\/media-library$/, 'Media'],
+    [/\/page-editor$/, 'Pages'],
+    [/\/orders-refunds$/, 'Orders'],
+    [/\/payment-gateway$/, 'Payments'],
+    [/\/my-learning$/, 'My learning'],
+    [/\/dashboard$/, 'Dashboard'],
+    [/\/reports$/, 'Reports'],
+    [/\/courses$/, 'Courses'],
+    [/\/users$/, 'Students'],
+    [/\/blogs$/, 'Blog'],
+    [/\/coupons$/, 'Coupons'],
+    [/\/mail-templates\/.+/, 'Edit template'],
+    [/\/mail-templates$/, 'Templates'],
+    [/\/smtp$/, 'Mail'],
+    [/\/settings$/, 'Settings'],
+    [/\/students$/, 'Students'],
+    [/\/qa$/, 'Questions'],
+    [/\/reviews$/, 'Reviews'],
+    [/\/analytics$/, 'Analytics'],
+    [/\/profile$/, 'Profile'],
+    [/\/certificates$/, 'Certificates'],
+    [/\/orders$/, 'Purchases'],
+    [/\/account$/, 'Account'],
+  ];
+  const pageName = pageRules.find(([pattern]) => pattern.test(location.pathname))?.[1] || 'Workspace';
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col md:flex-row text-slate-900 overflow-x-hidden">
@@ -220,29 +196,14 @@ export const AppLayout: React.FC = () => {
           </button>
         </div>
 
-        {/* Workspace Mode Badge */}
-        <div className="px-4 py-2.5 bg-gradient-to-r from-slate-50 to-slate-100/60 border-b border-slate-200 flex items-center justify-between">
-          <div>
-            <div className="text-[9px] font-bold uppercase tracking-wider text-slate-400">
-              Workspace Portal
-            </div>
-            <div className="text-xs font-bold text-slate-900 font-display flex items-center gap-1.5">
-              <span>{roleTitles[currentRole]}</span>
-            </div>
-          </div>
-          <span className="flex h-2 w-2 relative">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-            <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-600"></span>
-          </span>
-        </div>
-
-        {/* Navigation Sections */}
-        <nav className="flex-1 px-3 py-3 overflow-y-auto space-y-4">
+        <nav className="flex-1 px-3 py-2 overflow-y-auto space-y-1">
           {currentSections.map((section, sIdx) => (
-            <div key={section.title || sIdx} className="space-y-1">
-              <div className="px-2.5 text-[10px] font-bold uppercase tracking-wider text-slate-400 font-mono">
-                {section.title}
-              </div>
+            <div key={section.title || sIdx} className="space-y-0.5">
+              {section.title ? (
+                <div className="px-2.5 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                  {section.title}
+                </div>
+              ) : null}
               <div className="space-y-0.5">
                 {section.items.map((item) => (
                   <NavLink
@@ -263,47 +224,12 @@ export const AppLayout: React.FC = () => {
                       </span>
                       <span className="truncate">{item.label}</span>
                     </div>
-                    {item.badge !== undefined && (
-                      <span className="shrink-0 px-1.5 py-0.5 text-[10px] font-bold rounded-full bg-emerald-600 text-white">
-                        {item.badge}
-                      </span>
-                    )}
                   </NavLink>
                 ))}
               </div>
             </div>
           ))}
         </nav>
-
-        {/* Authenticated User Profile Card in Sidebar Footer */}
-        <div className="p-3 border-t border-slate-200 bg-slate-50/80">
-          <div className="flex items-center gap-2.5">
-            <img
-              src={currentUser?.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100'}
-              alt={currentUser?.name || 'User'}
-              className="w-9 h-9 rounded-full object-cover border border-slate-200 shadow-2xs"
-            />
-            <div className="min-w-0 flex-1">
-              <div className="text-xs font-bold text-slate-900 truncate">
-                {currentUser?.name || (currentUser as any)?.username || 'User'}
-              </div>
-              <div className="text-[10px] text-slate-500 truncate capitalize font-medium">
-                {currentUser?.role === 'admin' ? 'Administrator' : currentUser?.role === 'instructor' ? 'Instructor' : 'Student'}
-              </div>
-            </div>
-          </div>
-
-          <div className="mt-3 pt-2.5 border-t border-slate-200">
-            <button
-              type="button"
-              onClick={handleLogout}
-              className="w-full flex items-center justify-center gap-2 py-2 px-3 text-xs font-semibold text-rose-700 bg-rose-50 hover:bg-rose-100/90 border border-rose-200 rounded-lg transition-colors cursor-pointer"
-            >
-              <LogOut className="w-3.5 h-3.5" />
-              <span>Sign Out</span>
-            </button>
-          </div>
-        </div>
       </aside>
 
       {/* Main App Content Area */}
@@ -327,10 +253,8 @@ export const AppLayout: React.FC = () => {
             </div>
 
             {/* Desktop Breadcrumbs */}
-            <div className="hidden md:flex items-center gap-2 text-xs text-slate-500 overflow-hidden min-w-0">
-              <span className="font-semibold text-slate-900 shrink-0">{roleTitles[currentRole]}</span>
-              <ChevronRight className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-              <span className="text-slate-600 truncate">{location.pathname}</span>
+            <div className="hidden md:block text-sm font-semibold text-slate-900 truncate">
+              {pageName}
             </div>
           </div>
 
@@ -405,11 +329,7 @@ export const AppLayout: React.FC = () => {
             {/* User Profile Thumbnail & Quick Logout */}
             {currentUser && (
               <div className="flex items-center gap-2 pl-2 border-l border-slate-200">
-                <img
-                  src={currentUser.avatar}
-                  alt={currentUser.name}
-                  className="w-7 h-7 sm:w-8 sm:h-8 rounded-full object-cover border border-slate-200"
-                />
+                <Avatar name={currentUser.name} size="sm" />
                 <div className="hidden sm:block text-left">
                   <div className="text-xs font-bold text-slate-900 truncate max-w-[130px]">
                     {currentUser.name}
@@ -419,11 +339,12 @@ export const AppLayout: React.FC = () => {
                 <button
                   type="button"
                   onClick={handleLogout}
-                  className="p-1.5 text-slate-400 hover:text-rose-700 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
-                  title="Sign Out"
-                  aria-label="Sign Out"
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:text-rose-700 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
+                  title="Sign out"
+                  aria-label="Sign out"
                 >
-                  <LogOut className="w-4 h-4" />
+                  <LogOut className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Sign out</span>
                 </button>
               </div>
             )}

@@ -5,6 +5,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useNotifications } from '../../context/NotificationContext';
 import { Button } from '../../components/ui/Button';
 import { ProgressBar } from '../../components/ui/ProgressBar';
+import { userTeachesCourse } from '../../utils/courseFaculty';
 
 export const InstructorAnalyticsPage: React.FC = () => {
   const { courses } = useCourses();
@@ -14,27 +15,25 @@ export const InstructorAnalyticsPage: React.FC = () => {
   const [dateRange, setDateRange] = useState('q3-2026');
 
   const myCourses = courses.filter(
-    c => c.instructorId === currentUser?.id || c.instructorId === 'inst-7'
+    c => currentUser?.role === 'admin' || userTeachesCourse(c, currentUser?.id)
   );
 
   const totalStudents = myCourses.reduce((sum, c) => sum + c.studentCount, 0);
-  const totalGross = myCourses.reduce((sum, c) => sum + (c.studentCount * c.price), 0);
-  const totalNet = Math.round(totalGross * 0.85);
+
+  const ratedCourses = myCourses.filter((c) => Number(c.reviewsCount) > 0);
+  const averageRating = ratedCourses.length
+    ? ratedCourses.reduce((sum, c) => sum + Number(c.rating || 0), 0) / ratedCourses.length
+    : 0;
 
   const funnelSteps = [
-    { label: 'Marketplace Search Impressions', value: '420,000', percent: 100 },
-    { label: 'Course Landing Page Views', value: '142,800', percent: 34 },
-    { label: 'Free Lecture Previews Played', value: '58,400', percent: 13.9 },
-    { label: 'Added to Cart / Wishlist', value: '26,100', percent: 6.2 },
-    { label: 'Enrolled Paid Students', value: totalStudents.toLocaleString('en-IN'), percent: 3.9 }
+    { label: 'Published courses', value: myCourses.length.toLocaleString('en-IN'), percent: myCourses.length ? 100 : 0 },
+    { label: 'Enrolled students', value: totalStudents.toLocaleString('en-IN'), percent: totalStudents ? 100 : 0 },
   ];
 
   const handleExportCsv = () => {
-    let csv = "data:text/csv;charset=utf-8,Course_Title,Students,Price_INR,Gross_GMV_INR,Net_85_INR,Rating\n";
+    let csv = "data:text/csv;charset=utf-8,Course_Title,Students,Price_INR,Rating\n";
     myCourses.forEach(c => {
-      const gross = c.studentCount * c.price;
-      const net = Math.round(gross * 0.85);
-      csv += `"${c.title}",${c.studentCount},${c.price},${gross},${net},${c.rating}\n`;
+      csv += `"${c.title}",${c.studentCount},${c.price},${c.rating}\n`;
     });
     const encoded = encodeURI(csv);
     const link = document.createElement("a");
@@ -87,15 +86,12 @@ export const InstructorAnalyticsPage: React.FC = () => {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
         <div className="p-5 border border-slate-200 rounded bg-white">
           <div className="text-xs text-slate-500 uppercase tracking-wider font-semibold mb-1">
-            Net Creator Revenue (85%)
+            Published courses
           </div>
           <div className="text-2xl sm:text-3xl font-bold font-display text-emerald-950 tabular-nums">
-            ₹{totalNet.toLocaleString('en-IN')}
+            {myCourses.length.toLocaleString('en-IN')}
           </div>
-          <div className="mt-2 text-[11px] text-emerald-800 font-semibold flex items-center gap-1">
-            <TrendingUp className="w-3.5 h-3.5" />
-            <span>+18.4% vs previous period</span>
-          </div>
+          <div className="mt-2 text-[11px] text-slate-500">Courses you can edit from this studio</div>
         </div>
 
         <div className="p-5 border border-slate-200 rounded bg-white">
@@ -112,16 +108,16 @@ export const InstructorAnalyticsPage: React.FC = () => {
           <div className="text-xs text-slate-500 uppercase tracking-wider font-semibold mb-1">
             Course Completion Rate
           </div>
-          <div className="text-2xl sm:text-3xl font-bold font-display text-slate-900 tabular-nums">64.2%</div>
-          <div className="mt-2 text-[11px] text-emerald-800 font-semibold">High learner persistence</div>
+          <div className="text-2xl sm:text-3xl font-bold font-display text-slate-900 tabular-nums">—</div>
+          <div className="mt-2 text-[11px] text-slate-500">Available after learners finish lessons</div>
         </div>
 
         <div className="p-5 border border-slate-200 rounded bg-white">
           <div className="text-xs text-slate-500 uppercase tracking-wider font-semibold mb-1">
             Average Student Rating
           </div>
-          <div className="text-2xl sm:text-3xl font-bold font-display text-amber-900 tabular-nums">4.92 ★</div>
-          <div className="mt-2 text-[11px] text-slate-500">Based on verified enrolled reviews</div>
+          <div className="text-2xl sm:text-3xl font-bold font-display text-amber-900 tabular-nums">{averageRating ? averageRating.toFixed(2) : '—'}</div>
+          <div className="mt-2 text-[11px] text-slate-500">From reviews on your courses</div>
         </div>
       </div>
 
@@ -165,26 +161,18 @@ export const InstructorAnalyticsPage: React.FC = () => {
                 <th className="py-2.5 px-3">Course Title</th>
                 <th className="py-2.5 px-3 text-right">Students</th>
                 <th className="py-2.5 px-3 text-right">Price</th>
-                <th className="py-2.5 px-3 text-right">Gross GMV</th>
-                <th className="py-2.5 px-3 text-right">Net Revenue (85%)</th>
                 <th className="py-2.5 px-3 text-center">Avg Rating</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {myCourses.map((c) => {
-                const gross = c.studentCount * c.price;
-                const net = Math.round(gross * 0.85);
-                return (
+              {myCourses.map((c) => (
                   <tr key={c.id} className="hover:bg-slate-50">
                     <td className="py-3 px-3 font-semibold text-slate-900 truncate max-w-sm">{c.title}</td>
                     <td className="py-3 px-3 text-right tabular-nums">{c.studentCount.toLocaleString('en-IN')}</td>
                     <td className="py-3 px-3 text-right tabular-nums text-slate-600">₹{c.price.toLocaleString('en-IN')}</td>
-                    <td className="py-3 px-3 text-right tabular-nums font-medium">₹{gross.toLocaleString('en-IN')}</td>
-                    <td className="py-3 px-3 text-right tabular-nums font-bold text-emerald-950">₹{net.toLocaleString('en-IN')}</td>
                     <td className="py-3 px-3 text-center tabular-nums text-amber-900 font-bold">★ {c.rating}</td>
                   </tr>
-                );
-              })}
+              ))}
             </tbody>
           </table>
         </div>

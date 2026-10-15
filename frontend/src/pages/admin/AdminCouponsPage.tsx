@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { useAdmin } from '../../context/AdminContext';
 import { useNotifications } from '../../context/NotificationContext';
+import { apiErrorMessage } from '../../api/client';
 import { Table, Column } from '../../components/ui/Table';
 import { Button } from '../../components/ui/Button';
 import { Modal } from '../../components/ui/Modal';
@@ -62,7 +63,7 @@ export const AdminCouponsPage: React.FC = () => {
     showToast(nextState ? 'success' : 'info', `Coupon "${coupon.code}" is now ${nextState ? 'Active' : 'Disabled'}.`);
   };
 
-  const handleCreateCoupon = (e: React.FormEvent) => {
+  const handleCreateCoupon = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!code.trim()) {
       showToast('error', 'Coupon code cannot be empty.');
@@ -73,15 +74,19 @@ export const AdminCouponsPage: React.FC = () => {
       return;
     }
 
-    createCoupon({
-      code: code.trim().toUpperCase(),
-      discountPercent,
-      maxUses,
-      expiresAt,
-      active: true
-    });
-
-    showToast('success', `Campaign coupon "${code.trim().toUpperCase()}" launched successfully!`);
+    try {
+      await createCoupon({
+        code: code.trim().toUpperCase(),
+        discountPercent,
+        maxUses,
+        expiresAt,
+        active: true
+      });
+      showToast('success', `Coupon "${code.trim().toUpperCase()}" is saved.`);
+    } catch (err) {
+      showToast('error', apiErrorMessage(err, 'Could not save this coupon.'));
+      return;
+    }
     setCode('');
     setDiscountPercent(25);
     setMaxUses(500);
@@ -303,7 +308,7 @@ export const AdminCouponsPage: React.FC = () => {
           />
 
           <div className="p-3 bg-slate-50 border border-slate-200 rounded text-[11px] text-slate-600 leading-relaxed">
-            Prajnadhara policy limits promotional discounts to a maximum of 90% to protect instructor net royalty payouts.
+            Promotional discounts can be up to 90%.
           </div>
 
           <div className="pt-2 flex justify-end gap-2 border-t border-slate-100">

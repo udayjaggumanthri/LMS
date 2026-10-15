@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { Upload, Image as ImageIcon, CheckCircle, AlertCircle, Trash2, Link as LinkIcon, FolderOpen, X } from 'lucide-react';
 import { adminService } from '../../api/adminService';
+import { resolveMediaUrl } from '../../api/client';
 import { Button } from '../ui/Button';
 
 interface MediaUploaderProps {
@@ -137,7 +138,7 @@ export const MediaUploader: React.FC<MediaUploaderProps> = ({
         <div className="relative border border-slate-200 rounded p-3 bg-slate-50 flex items-center gap-4">
           <div className="w-20 h-16 bg-slate-200 rounded overflow-hidden flex items-center justify-center border border-slate-300 shrink-0">
             {value.match(/\.(jpeg|jpg|gif|png|webp|svg)$/i) || value.includes('unsplash') || value.includes('uploads') ? (
-              <img src={value} alt="Preview" className="w-full h-full object-cover" />
+              <img src={resolveMediaUrl(value)} alt="Preview" className="w-full h-full object-cover" />
             ) : (
               <ImageIcon className="w-6 h-6 text-slate-400" />
             )}

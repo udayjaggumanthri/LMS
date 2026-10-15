@@ -48,8 +48,8 @@ class Certificate(TimeStampedModel):
     certificate_number = models.CharField(max_length=50, unique=True)
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='certificates')
     course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name='certificates')
-    grade = models.CharField(max_length=10, default='Distinction (A+)')
-    total_hours = models.FloatField(default=12.0)
+    grade = models.CharField(max_length=20, default='Completed')
+    total_hours = models.FloatField(default=0.0)
     secure_hash = models.CharField(max_length=64, default='')
 
     class Meta:

@@ -18,6 +18,15 @@ SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-prajnadhara-edu-enterprise
 DEBUG = os.getenv('DEBUG', 'True') == 'True'
 
 ALLOWED_HOSTS = [host.strip() for host in os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1,0.0.0.0').split(',')]
+if 'uat.prajnadharaedu.com' not in ALLOWED_HOSTS:
+    ALLOWED_HOSTS.append('uat.prajnadharaedu.com')
+
+CSRF_TRUSTED_ORIGINS = [
+    'https://uat.prajnadharaedu.com',
+    'http://uat.prajnadharaedu.com',
+]
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+USE_X_FORWARDED_HOST = True
 
 # Application definition
 INSTALLED_APPS = [
@@ -40,6 +49,7 @@ INSTALLED_APPS = [
     'apps.courses',
     'apps.cart',
     'apps.orders',
+    'apps.payment_hub',
     'apps.payments',
     'apps.learning',
     'apps.interactions',
@@ -133,6 +143,10 @@ TIME_ZONE = 'Asia/Kolkata'
 USE_I18N = True
 USE_TZ = True
 
+# Central payment hub. Set PAYMENT_HUB_ENABLED=false to use the previous Toucan path.
+PAYMENT_HUB_ENABLED = os.getenv('PAYMENT_HUB_ENABLED', 'true').lower() in ('1', 'true', 'yes')
+LMS_HUB_APPLICATION_ID = os.getenv('LMS_HUB_APPLICATION_ID', 'LMS')
+
 STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 
@@ -150,7 +164,7 @@ REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': (
         'rest_framework.permissions.AllowAny',
     ),
-    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    'DEFAULT_PAGINATION_CLASS': 'config.pagination.StandardPagination',
     'PAGE_SIZE': 20,
     'DEFAULT_FILTER_BACKENDS': (
         'django_filters.rest_framework.DjangoFilterBackend',

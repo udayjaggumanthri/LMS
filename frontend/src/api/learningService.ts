@@ -36,4 +36,14 @@ export const learningService = {
     const res = await apiClient.post('/learning/notes/', data);
     return res.data;
   },
+
+  async deleteNote(noteId: string | number) {
+    const res = await apiClient.delete(`/learning/notes/${noteId}/`);
+    return res.data;
+  },
+
+  async claimCertificate(courseId: string | number) {
+    const res = await apiClient.post('/learning/certificates/claim/', { courseId });
+    return res.data;
+  },
 };

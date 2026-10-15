@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { useBranding } from '../../context/BrandingContext';
+import { resolveMediaUrl } from '../../api/client';
 
 interface LogoProps {
   className?: string;
@@ -52,7 +53,7 @@ export const Logo: React.FC<LogoProps> = ({
       {branding.logoUrl && !imgError ? (
         <div className={`inline-flex items-center ${inverted ? 'bg-white/95 px-2.5 py-1 rounded-md shadow-xs' : ''}`}>
           <img
-            src={branding.logoUrl}
+            src={resolveMediaUrl(branding.logoUrl)}
             alt={displayName}
             className={`${imageSizes[size]} w-auto object-contain shrink-0`}
             loading="eager"

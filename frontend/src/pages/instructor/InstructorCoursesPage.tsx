@@ -5,23 +5,23 @@ import {
   Search,
   Filter,
   RotateCcw,
-  Sparkles,
   BookOpen,
   CheckCircle2,
   Clock,
   Layers,
-  Trash2,
-  X
+  Trash2
 } from 'lucide-react';
 import { useCourses } from '../../context/CourseContext';
 import { useAuth } from '../../context/AuthContext';
 import { useNotifications } from '../../context/NotificationContext';
 import { CourseManagementCard } from '../../components/courses/CourseManagementCard';
+import { courseFacultyIds, userTeachesCourse } from '../../utils/courseFaculty';
 import { Course, CourseStatus } from '../../types';
+import { apiErrorMessage } from '../../api/client';
 
 export const InstructorCoursesPage: React.FC = () => {
   const navigate = useNavigate();
-  const { courses, categories, deleteCourse, updateCourseStatus, addCourse } = useCourses();
+  const { courses, categories, deleteCourse, updateCourse, updateCourseStatus, addCourse } = useCourses();
   const { currentUser } = useAuth();
   const { showToast } = useNotifications();
 
@@ -34,15 +34,10 @@ export const InstructorCoursesPage: React.FC = () => {
   // Delete Confirmation Modal
   const [courseToDelete, setCourseToDelete] = useState<Course | null>(null);
 
-  // AI Course Outline Generator Modal
-  const [aiModalOpen, setAiModalOpen] = useState(false);
-  const [aiPrompt, setAiPrompt] = useState('');
-  const [isGeneratingAi, setIsGeneratingAi] = useState(false);
-
   // All courses belonging to instructor or admin
   const availableCourses = useMemo(() => {
     return courses.filter(
-      c => String(c.instructorId) === String(currentUser?.id) || currentUser?.role === 'admin'
+      c => currentUser?.role === 'admin' || userTeachesCourse(c, currentUser?.id)
     );
   }, [courses, currentUser]);
 
@@ -50,8 +45,10 @@ export const InstructorCoursesPage: React.FC = () => {
   const distinctAuthors = useMemo(() => {
     const map = new Map<string, string>();
     availableCourses.forEach(c => {
-      const name = c.instructor?.name || 'admin';
-      map.set(String(c.instructorId || name), name);
+      const people = c.instructors?.length
+        ? c.instructors
+        : [{ id: String(c.instructorId), name: c.instructor?.name || 'Instructor' }];
+      people.forEach((person) => map.set(String(person.id), person.name));
     });
     return Array.from(map.entries()).map(([id, name]) => ({ id, name }));
   }, [availableCourses]);
@@ -68,7 +65,7 @@ export const InstructorCoursesPage: React.FC = () => {
       }
       // Author
       if (authorFilter !== 'all') {
-        const authorMatch = String(c.instructorId) === authorFilter || (c.instructor?.name === authorFilter);
+        const authorMatch = courseFacultyIds(c).includes(authorFilter) || (c.instructor?.name === authorFilter);
         if (!authorMatch) return false;
       }
       // Category
@@ -90,18 +87,31 @@ export const InstructorCoursesPage: React.FC = () => {
     setStatusFilter('all');
   };
 
-  const handlePublishToggle = (course: Course) => {
-    const nextStatus: CourseStatus = course.status === 'published' ? 'draft' : 'published';
-    updateCourseStatus(course.id, nextStatus);
-    showToast(
-      nextStatus === 'published'
-        ? `Course "${course.title}" is now Live!`
-        : `Course "${course.title}" reverted to Draft.`,
-      'success'
-    );
+  const handleHomepageToggle = async (course: Course) => {
+    try {
+      await updateCourse(course.id, { featured: !course.featured });
+      showToast(!course.featured ? `"${course.title}" is on the homepage.` : `"${course.title}" was removed from the homepage.`, 'success');
+    } catch (err) {
+      showToast(apiErrorMessage(err, 'Could not update the homepage setting.'), 'error');
+    }
   };
 
-  const handleDuplicateCourse = (course: Course) => {
+  const handlePublishToggle = async (course: Course) => {
+    const nextStatus: CourseStatus = course.status === 'published' ? 'draft' : 'published';
+    try {
+      await updateCourseStatus(course.id, nextStatus);
+      showToast(
+        nextStatus === 'published'
+          ? `Course "${course.title}" is now Live!`
+          : `Course "${course.title}" reverted to Draft.`,
+        'success'
+      );
+    } catch (err) {
+      showToast(apiErrorMessage(err, 'Could not update this course.'), 'error');
+    }
+  };
+
+  const handleDuplicateCourse = async (course: Course) => {
     const duplicatedData = {
       ...course,
       title: `${course.title} (Copy)`,
@@ -110,82 +120,26 @@ export const InstructorCoursesPage: React.FC = () => {
       studentCount: 0,
       rating: 0,
       reviewsCount: 0,
+      curriculum: course.curriculum || [],
     };
-    // remove id so it creates a fresh record
     delete (duplicatedData as any).id;
-    addCourse(duplicatedData as any);
-    showToast(`Course duplicated into a draft.`, 'success');
+    try {
+      await addCourse(duplicatedData as any);
+      showToast('Course duplicated into a draft.', 'success');
+    } catch (err) {
+      showToast(apiErrorMessage(err, 'Could not duplicate this course.'), 'error');
+    }
   };
 
-  const handleConfirmDelete = () => {
+  const handleConfirmDelete = async () => {
     if (!courseToDelete) return;
-    deleteCourse(courseToDelete.id);
-    showToast(`Course "${courseToDelete.title}" deleted.`, 'info');
-    setCourseToDelete(null);
-  };
-
-  // Generate with AI
-  const handleGenerateWithAi = () => {
-    if (!aiPrompt.trim()) return;
-    setIsGeneratingAi(true);
-
-    setTimeout(() => {
-      const generatedTitle = aiPrompt.trim();
-      const generatedSlug = generatedTitle.toLowerCase().replace(/[^a-z0-9]+/g, '-');
-      const newCourseData = {
-        title: generatedTitle,
-        subtitle: `Masterclass focused on comprehensive ${generatedTitle} workflows`,
-        slug: generatedSlug,
-        categoryId: categories[0]?.id || '1',
-        subcategory: categories[0]?.name || 'Artificial Intelligence',
-        instructorId: currentUser?.id || '1',
-        price: 1999,
-        originalPrice: 4999,
-        isFree: false,
-        durationHours: 12,
-        durationWeeks: 10,
-        lectureCount: 6,
-        level: 'All Levels' as const,
-        language: 'English',
-        lastUpdated: new Date().toISOString().split('T')[0],
-        badges: ['New' as const],
-        thumbnail: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=800',
-        whatYouWillLearn: [
-          `Core architectural principles of ${generatedTitle}`,
-          `Real-world enterprise system design and automation`,
-          `Production security, monitoring, and scaling best practices`
-        ],
-        requirements: ['Basic computer science literacy', 'Development environment setup'],
-        targetAudience: ['Engineers', 'Architects', 'Tech Leaders'],
-        description: `Deep-dive program into ${generatedTitle}. Built for ambitious engineers and builders.`,
-        curriculum: [
-          {
-            id: `sec-${Date.now()}-1`,
-            title: `Section 1: Foundations of ${generatedTitle}`,
-            lectures: [
-              { id: `lec-${Date.now()}-1`, title: 'Core Principles & Overview', durationMinutes: 15, type: 'video' as const, previewFree: true },
-              { id: `lec-${Date.now()}-2`, title: 'Architecture Setup', durationMinutes: 20, type: 'video' as const }
-            ]
-          },
-          {
-            id: `sec-${Date.now()}-2`,
-            title: `Section 2: Practical Implementation`,
-            lectures: [
-              { id: `lec-${Date.now()}-3`, title: 'Hands-on Lab Exercise', durationMinutes: 30, type: 'video' as const },
-              { id: `lec-${Date.now()}-4`, title: 'Module Quiz & Knowledge Check', durationMinutes: 15, type: 'quiz' as const }
-            ]
-          }
-        ],
-        status: 'draft' as CourseStatus,
-      };
-
-      const created = addCourse(newCourseData as any);
-      setIsGeneratingAi(false);
-      setAiModalOpen(false);
-      setAiPrompt('');
-      showToast(`AI outline created! Opening Course Builder...`, 'success');
-      navigate(`/instructor/courses/${created.id}/edit`);
-    }, 800);
+    try {
+      await deleteCourse(courseToDelete.id);
+      showToast(`Course "${courseToDelete.title}" deleted.`, 'info');
+      setCourseToDelete(null);
+    } catch (err) {
+      showToast(apiErrorMessage(err, 'Could not delete this course.'), 'error');
+    }
   };
 
   return (
@@ -202,15 +156,6 @@ export const InstructorCoursesPage: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-2.5 shrink-0">
-          <button
-            type="button"
-            onClick={() => setAiModalOpen(true)}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-purple-50 hover:bg-purple-100 border border-purple-200 text-purple-700 text-xs font-bold transition-all shadow-xs"
-          >
-            <Sparkles className="w-3.5 h-3.5" />
-            <span>Generate with AI</span>
-          </button>
-
           <Link
             to="/instructor/courses/new"
             className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white text-xs font-bold shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-indigo-500"
@@ -305,6 +250,7 @@ export const InstructorCoursesPage: React.FC = () => {
             onEdit={() => navigate(`/instructor/courses/${course.id}/edit`)}
             onDelete={() => setCourseToDelete(course)}
             onPublishToggle={handlePublishToggle}
+            onHomepageToggle={handleHomepageToggle}
             onDuplicate={handleDuplicateCourse}
           />
         ))}
@@ -362,63 +308,6 @@ export const InstructorCoursesPage: React.FC = () => {
         </div>
       )}
 
-      {/* AI Generator Modal */}
-      {aiModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs animate-in fade-in duration-150">
-          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200 space-y-4 text-left">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <div className="flex items-center gap-2">
-                <div className="p-1.5 rounded-lg bg-purple-50 text-purple-600">
-                  <Sparkles className="w-4 h-4" />
-                </div>
-                <h3 className="text-sm font-bold text-slate-900">AI Masterclass Generator</h3>
-              </div>
-              <button
-                type="button"
-                onClick={() => setAiModalOpen(false)}
-                className="p-1 rounded-lg text-slate-400 hover:text-slate-700"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-                What course do you want to create?
-              </label>
-              <textarea
-                rows={3}
-                value={aiPrompt}
-                onChange={(e) => setAiPrompt(e.target.value)}
-                placeholder="e.g. Agentic AI Engineering & Autonomous Systems Fellowship"
-                className="w-full p-3 rounded-xl border border-slate-200 text-xs text-slate-900 focus:border-purple-500 focus:ring-2 focus:ring-purple-100 placeholder-slate-400"
-              />
-              <p className="text-[11px] text-slate-400 mt-1">
-                AI will draft course title, structured sections, lessons, learning outcomes, and pricing.
-              </p>
-            </div>
-
-            <div className="flex items-center justify-end gap-2.5 pt-2">
-              <button
-                type="button"
-                onClick={() => setAiModalOpen(false)}
-                className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                disabled={isGeneratingAi || !aiPrompt.trim()}
-                onClick={handleGenerateWithAi}
-                className="inline-flex items-center gap-1.5 px-5 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold shadow-xs disabled:opacity-50"
-              >
-                <Sparkles className="w-3.5 h-3.5" />
-                <span>{isGeneratingAi ? 'Generating Curriculum...' : 'Generate Course'}</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

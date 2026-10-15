@@ -15,13 +15,16 @@ import { Input } from '../../components/ui/Input';
 import { Modal } from '../../components/ui/Modal';
 import { useAdmin } from '../../context/AdminContext';
 import { useAuth } from '../../context/AuthContext';
+import { useNotifications } from '../../context/NotificationContext';
+import { apiErrorMessage, resolveMediaUrl } from '../../api/client';
 import { adminService } from '../../api/adminService';
 import { cmsService } from '../../api/cmsService';
-const TEACH_IMAGE = '/src/assets/images/teach_instructor_studio_1791558529974.jpg';
+const TEACH_IMAGE = '';
 
 export const TeachLandingPage: React.FC = () => {
   const { submitInstructorApplication } = useAdmin();
   const { currentUser } = useAuth();
+  const { showToast } = useNotifications();
 
   const [applicationModalOpen, setApplicationModalOpen] = useState(false);
   const [submittedSuccess, setSubmittedSuccess] = useState(false);
@@ -30,7 +33,7 @@ export const TeachLandingPage: React.FC = () => {
   const [teachCMS, setTeachCMS] = useState({
     badge: 'Prajnadhara Instructor Program',
     title: 'Teach the tradecraft you practice every day.',
-    subtitle: 'Deliver rigorous, semester-aligned curricula on PrajnadharaEdu. Create practical courses, organize modular lessons, attach project source code, and directly publish to thousands of enrolled students.',
+    subtitle: 'Create practical courses, organize lessons into sections, and publish them for students on PrajnadharaEdu.',
     mediaUrl: TEACH_IMAGE
   });
 
@@ -70,18 +73,26 @@ export const TeachLandingPage: React.FC = () => {
   const [sampleTopic, setSampleTopic] = useState('');
   const [portfolioLink, setPortfolioLink] = useState('');
 
-  const handleSubmitApplication = (e: React.FormEvent) => {
+  const handleSubmitApplication = async (e: React.FormEvent) => {
     e.preventDefault();
-    submitInstructorApplication({
-      userId: currentUser?.id || `user-applicant-${Date.now()}`,
-      applicantName,
-      email: applicantEmail,
-      expertise,
-      experienceBio,
-      sampleTopic,
-      linkedinOrPortfolio: portfolioLink
-    });
-    setSubmittedSuccess(true);
+    if (!currentUser) {
+      showToast('Sign in before submitting an instructor application.', 'error');
+      return;
+    }
+    try {
+      await submitInstructorApplication({
+        userId: String(currentUser.id),
+        applicantName,
+        email: applicantEmail,
+        expertise,
+        experienceBio,
+        sampleTopic,
+        linkedinOrPortfolio: portfolioLink
+      });
+      setSubmittedSuccess(true);
+    } catch (err) {
+      showToast(apiErrorMessage(err, 'Could not submit the application.'), 'error');
+    }
   };
 
   return (
@@ -123,11 +134,15 @@ export const TeachLandingPage: React.FC = () => {
 
             <div className="lg:col-span-5">
               <div className="border border-slate-200 rounded overflow-hidden bg-slate-50">
+                {teachCMS.mediaUrl ? (
                 <img
-                  src={teachCMS.mediaUrl}
-                  alt="Instructor teaching with dual monitor setup"
-                  className="w-full aspect-[4/3] object-cover"
+                  src={resolveMediaUrl(teachCMS.mediaUrl)}
+                  alt=""
+                  className="w-full aspect-[4/3] object-cover bg-white"
                 />
+                ) : (
+                  <div className="w-full aspect-[4/3] bg-slate-100" />
+                )}
               </div>
             </div>
           </div>
@@ -145,7 +160,7 @@ export const TeachLandingPage: React.FC = () => {
               Everything faculty need to teach and publish
             </h2>
             <p className="mt-2 text-xs sm:text-sm text-slate-600">
-              A comprehensive academic workbench engineered for streamlined lecture delivery, organized semester taxonomies, and high-impact learning.
+              Write lessons, attach files, and publish a course from one place.
             </p>
           </div>
 
@@ -154,9 +169,9 @@ export const TeachLandingPage: React.FC = () => {
               <div className="w-10 h-10 rounded-lg bg-emerald-50 text-emerald-700 flex items-center justify-center font-bold mb-4">
                 01
               </div>
-              <h3 className="text-base font-bold text-slate-900 mb-2">Structured Semester Syllabi</h3>
+              <h3 className="text-base font-bold text-slate-900 mb-2">Sections and lessons</h3>
               <p className="text-xs text-slate-600 leading-relaxed">
-                Map each subject directly into Semester 1 through 8 or departmental electives. Organize lectures into modular units with clear academic objectives.
+                Group lessons into sections. Each lesson can be a video, an article, a quiz, or a download.
               </p>
             </div>
 
@@ -222,7 +237,7 @@ export const TeachLandingPage: React.FC = () => {
               </div>
               <h3 className="font-bold text-base text-slate-900">3. Submit for Review & Launch</h3>
               <p className="mt-2 text-xs text-slate-600 leading-relaxed">
-                Our review team audits the course within 48 hours. Once approved, your course goes live to over 184,000 learners on the marketplace.
+                Submit the course for review. Once it is approved, students can find it in the catalog.
               </p>
             </div>
           </div>

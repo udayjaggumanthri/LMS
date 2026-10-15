@@ -17,6 +17,7 @@ import {
 import { blogService, BlogPostItem } from '../../api/blogService';
 import { Breadcrumbs } from '../../components/ui/Breadcrumbs';
 import { Button } from '../../components/ui/Button';
+import { Avatar } from '../../components/ui/Avatar';
 import { useNotifications } from '../../context/NotificationContext';
 import { RichContentViewer } from '../../components/common/RichContentViewer';
 
@@ -124,17 +125,7 @@ export const BlogDetailPage: React.FC = () => {
         {/* Metadata & Author Row */}
         <div className="mt-6 pt-6 border-t border-slate-200 flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            {post.authorAvatar ? (
-              <img
-                src={post.authorAvatar}
-                alt={post.authorName}
-                className="w-11 h-11 rounded-full object-cover border border-slate-200"
-              />
-            ) : (
-              <div className="w-11 h-11 rounded-full bg-emerald-100 text-emerald-800 flex items-center justify-center font-bold text-sm">
-                {post.authorName.charAt(0)}
-              </div>
-            )}
+            <Avatar name={post.authorName} size="lg" />
             <div>
               <div className="text-sm font-bold text-slate-900">{post.authorName}</div>
               <div className="text-xs text-slate-500">{post.authorRole || 'Faculty Author'}</div>
@@ -184,17 +175,7 @@ export const BlogDetailPage: React.FC = () => {
 
         {/* 5. Author Biography Card */}
         <div className="mt-12 p-6 bg-slate-50 border border-slate-200 rounded-2xl flex flex-col sm:flex-row items-center sm:items-start gap-5">
-          {post.authorAvatar ? (
-            <img
-              src={post.authorAvatar}
-              alt={post.authorName}
-              className="w-16 h-16 rounded-full object-cover border-2 border-white shadow-xs shrink-0"
-            />
-          ) : (
-            <div className="w-16 h-16 rounded-full bg-emerald-100 text-emerald-800 flex items-center justify-center font-bold text-xl shrink-0">
-              {post.authorName.charAt(0)}
-            </div>
-          )}
+          <Avatar name={post.authorName} size="xl" className="!w-16 !h-16" />
           <div className="text-center sm:text-left flex-1">
             <div className="text-xs font-bold uppercase tracking-wider text-emerald-800 mb-0.5">About The Author</div>
             <h4 className="text-base font-bold text-slate-900">{post.authorName}</h4>
@@ -242,7 +223,7 @@ export const BlogDetailPage: React.FC = () => {
               >
                 <div className="aspect-video bg-slate-900 overflow-hidden">
                   <img
-                    src={rel.coverImage || 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=800'}
+                    src={rel.coverImage || '/empty-cover.svg'}
                     alt={rel.title}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                   />

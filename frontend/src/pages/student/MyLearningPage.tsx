@@ -8,6 +8,7 @@ import { ProgressBar } from '../../components/ui/ProgressBar';
 import { Button } from '../../components/ui/Button';
 import { Tabs } from '../../components/ui/Tabs';
 import { CourseCard } from '../../components/ui/CourseCard';
+import { CourseCover } from '../../components/courses/CourseCover';
 
 export const MyLearningPage: React.FC = () => {
   const { enrollments, getCourseProgressPercent } = useLearning();
@@ -62,10 +63,12 @@ export const MyLearningPage: React.FC = () => {
                     <div>
                       {/* Thumbnail */}
                       <Link to={`/student/course/${course.id}`} className="block aspect-video bg-slate-100 overflow-hidden relative group">
-                        <img
-                          src={course.thumbnail}
-                          alt={course.title}
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
+                        <CourseCover
+                          title={course.title}
+                          category={course.subcategory}
+                          categoryId={course.categoryId}
+                          thumbnail={course.thumbnail}
+                          className="transition-transform duration-200 group-hover:scale-105"
                         />
                         <div className="absolute inset-0 bg-black/20 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                           <PlayCircle className="w-10 h-10 text-white" />

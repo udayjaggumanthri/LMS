@@ -3,26 +3,32 @@ import { useParams } from 'react-router-dom';
 import { useCourses } from '../../context/CourseContext';
 import { CourseCard } from '../../components/ui/CourseCard';
 import { Breadcrumbs } from '../../components/ui/Breadcrumbs';
+import { Avatar } from '../../components/ui/Avatar';
+import { courseFacultyIds } from '../../utils/courseFaculty';
 
 export const InstructorProfilePage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const { courses } = useCourses();
 
-  const matchingCourse = courses.find(c => String(c.instructorId) === String(id));
-  const rawInstructor: any = typeof matchingCourse?.instructor === 'object' ? matchingCourse.instructor : null;
+  const instructorCourses = courses.filter(c => courseFacultyIds(c).includes(String(id)) && c.status === 'published');
+  const matchingCourse = instructorCourses[0];
+  const listed = matchingCourse?.instructors?.find((person) => String(person.id) === String(id));
+  const rawInstructor: any = listed || (String(matchingCourse?.instructorId) === String(id) ? matchingCourse?.instructor : null);
+  const learnerCount = instructorCourses.reduce((sum, c) => sum + Number(c.studentCount || 0), 0);
+  const rated = instructorCourses.filter((c) => Number(c.reviewsCount) > 0);
+  const averageRating = rated.length
+    ? rated.reduce((sum, c) => sum + Number(c.rating || 0), 0) / rated.length
+    : 0;
 
   const instructor = {
-    id: id || '1',
-    name: rawInstructor?.name || (rawInstructor as any)?.first_name ? `${(rawInstructor as any).first_name} ${(rawInstructor as any).last_name || ''}`.trim() : 'Instructor Faculty',
-    avatar: rawInstructor?.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300',
-    title: rawInstructor?.title || 'Principal Distributed Systems Engineer',
-    bio: rawInstructor?.bio || 'Practitioner delivering production-grade engineering curricula.',
-    rating: rawInstructor?.rating || 4.9,
-    studentsCount: (rawInstructor as any)?.students_count || 42000,
-    reviewsCount: (rawInstructor as any)?.reviews_count || 3800
+    id: id || '',
+    name: rawInstructor?.name || ((rawInstructor as any)?.first_name ? `${(rawInstructor as any).first_name} ${(rawInstructor as any).last_name || ''}`.trim() : 'Instructor'),
+    avatar: rawInstructor?.avatar || '',
+    title: rawInstructor?.title || '',
+    bio: rawInstructor?.bio || '',
+    rating: averageRating,
+    studentsCount: (rawInstructor as any)?.students_count || learnerCount,
   };
-
-  const instructorCourses = courses.filter(c => String(c.instructorId) === String(id) && c.status === 'published');
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 py-10 text-left text-slate-900">
@@ -38,11 +44,7 @@ export const InstructorProfilePage: React.FC = () => {
       {/* Instructor Hero Banner */}
       <div className="p-5 sm:p-8 border border-slate-200 rounded bg-slate-50 mb-10">
         <div className="flex flex-col sm:flex-row items-start gap-5 sm:gap-6">
-          <img
-            src={instructor.avatar}
-            alt={instructor.name}
-            className="w-20 h-20 sm:w-28 sm:h-28 rounded object-cover border border-slate-200 shrink-0"
-          />
+          <Avatar name={instructor.name} size="xl" className="!w-20 !h-20 sm:!w-28 sm:!h-28" />
           <div className="flex-1">
             <div className="text-xs font-bold uppercase tracking-wider text-emerald-800 mb-1">
               Instructor Profile
@@ -55,13 +57,13 @@ export const InstructorProfilePage: React.FC = () => {
             <div className="mt-4 flex items-center gap-4 sm:gap-6 text-xs text-slate-600 flex-wrap">
               <div>
                 <strong className="text-slate-900 font-bold text-base tabular-nums">
-                  {instructor.rating || 4.9}
+                  {instructor.rating ? instructor.rating.toFixed(2) : '—'}
                 </strong>
                 <span className="text-slate-500 ml-1">Instructor Rating</span>
               </div>
               <div className="border-l border-slate-200 pl-4 sm:pl-6">
                 <strong className="text-slate-900 font-bold text-base tabular-nums">
-                  {instructor.studentsCount?.toLocaleString('en-IN') || '40,000+'}
+                  {Number(instructor.studentsCount || 0).toLocaleString('en-IN')}
                 </strong>
                 <span className="text-slate-500 ml-1">Total Learners</span>
               </div>

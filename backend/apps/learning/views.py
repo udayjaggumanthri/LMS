@@ -74,7 +74,7 @@ class ToggleLectureProgressView(APIView):
             cert, cert_created = Certificate.objects.get_or_create(
                 user=request.user,
                 course=course,
-                defaults={'total_hours': course.duration_hours or 10.0}
+                defaults={'total_hours': course.duration_hours or 0, 'grade': 'Completed'}
             )
             enrollment = Enrollment.objects.filter(user=request.user, course=course).first()
             if enrollment and not enrollment.completed_at:
@@ -122,4 +122,35 @@ class CertificateViewSet(viewsets.ReadOnlyModelViewSet):
             cert = Certificate.objects.get(certificate_number=cert_number)
             return Response(CertificateSerializer(cert).data)
         except Certificate.DoesNotExist:
-            return Response({'error': 'Certificate not found on immutable verification ledger.'}, status=status.HTTP_404_NOT_FOUND)
+            return Response({'error': 'Certificate not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+
+class ClaimCertificateView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        course_id = request.data.get('courseId') or request.data.get('course_id')
+        try:
+            course = Course.objects.get(id=course_id)
+        except (Course.DoesNotExist, ValueError, TypeError):
+            return Response({'error': 'Course not found.'}, status=status.HTTP_404_NOT_FOUND)
+        if not Enrollment.objects.filter(user=request.user, course=course, is_active=True).exists():
+            return Response({'error': 'Enroll in this course before claiming a certificate.'}, status=status.HTTP_403_FORBIDDEN)
+        lecture_ids = list(Lecture.objects.filter(section__course=course).values_list('id', flat=True))
+        if not lecture_ids:
+            return Response({'error': 'This course has no lectures yet.'}, status=status.HTTP_400_BAD_REQUEST)
+        completed = LectureProgress.objects.filter(
+            user=request.user, lecture_id__in=lecture_ids, completed=True
+        ).count()
+        if completed < len(lecture_ids):
+            return Response({'error': 'Finish every lecture before claiming a certificate.'}, status=status.HTTP_400_BAD_REQUEST)
+        cert, _ = Certificate.objects.get_or_create(
+            user=request.user,
+            course=course,
+            defaults={'total_hours': course.duration_hours or 0, 'grade': 'Completed'}
+        )
+        enrollment = Enrollment.objects.filter(user=request.user, course=course).first()
+        if enrollment and not enrollment.completed_at:
+            enrollment.completed_at = timezone.now()
+            enrollment.save(update_fields=['completed_at'])
+        return Response(CertificateSerializer(cert).data)

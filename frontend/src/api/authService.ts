@@ -42,6 +42,16 @@ export const authService = {
     return response.data;
   },
 
+  async forgotPassword(email: string) {
+    const response = await apiClient.post('/auth/forgot-password/', { email });
+    return response.data;
+  },
+
+  async resetPassword(data: { uid: string; token: string; password: string }) {
+    const response = await apiClient.post('/auth/reset-password/', data);
+    return response.data;
+  },
+
   logout() {
     localStorage.removeItem('prajnadhara_token');
     localStorage.removeItem('prajnadhara_refresh_token');

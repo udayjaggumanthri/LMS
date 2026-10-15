@@ -35,6 +35,9 @@ class ToucanPayIntegrationTests(TestCase):
         self.pg_settings.mid = 'TEST_MID_1001'
         self.pg_settings.tid = '88889999'
         self.pg_settings.mac_token = 'TEST_ENCRYPTED_MAC_TOKEN_VALUE'
+        self.pg_settings.checkout_session_url = 'https://pay.example/api/auth/getpaymentsession'
+        self.pg_settings.status_check_url = 'https://pay.example/api/pay/v1/checkStatus'
+        self.pg_settings.merchant_region_url = 'https://pay.example/region'
         self.pg_settings.save()
 
     def test_ha_hash_matches_toucanpay_spec(self):
@@ -48,6 +51,7 @@ class ToucanPayIntegrationTests(TestCase):
         inv = ToucanPayService.generate_invoice_number()
         self.assertGreaterEqual(len(inv), 15)
         self.assertTrue(inv.isdigit())
+        self.assertFalse(inv.startswith(self.pg_settings.tid))
 
     def test_payment_gateway_settings_singleton(self):
         settings = PaymentGatewaySettings.get_settings()
@@ -77,7 +81,7 @@ class ToucanPayIntegrationTests(TestCase):
         self.assertEqual(fresh.password, "SuperSecretPortalPass123")
         self.assertEqual(fresh.mac_token, "SampleSensitiveMacJwtTokenValue")
 
-    @patch('apps.orders.toucanpay_service.urllib.request.build_opener')
+    @patch('apps.payment_hub.providers.toucan.urllib.request.build_opener')
     def test_initiate_payment_flow(self, mock_build_opener):
         mock_opener = MagicMock()
         mock_resp = MagicMock()
@@ -106,7 +110,7 @@ class ToucanPayIntegrationTests(TestCase):
         self.assertEqual(tx.order, order)
         self.assertEqual(tx.status, 'pending')
 
-    @patch('apps.orders.toucanpay_service.urllib.request.build_opener')
+    @patch('apps.payment_hub.providers.toucan.urllib.request.build_opener')
     def test_verify_payment_and_enrollment(self, mock_build_opener):
         mock_opener = MagicMock()
         mock_resp = MagicMock()
@@ -117,16 +121,20 @@ class ToucanPayIntegrationTests(TestCase):
 
         # Initiate first
         init_res = self.client.post('/api/payments/toucan/initiate/', {
-            'course_ids': [self.course.id]
+            'course_ids': [self.course.id],
+            'phone': '9876543210',
         }, content_type='application/json')
         invoice_number = init_res.json()['invoice_number']
         order_id = init_res.json()['order_id']
 
-        # Verify with simulation confirm
-        verify_res = self.client.post('/api/payments/toucan/verify/', {
-            'invoice_number': invoice_number,
-            'simulate_confirm': True
-        }, content_type='application/json')
+        with patch('apps.payment_hub.providers.toucan.urllib.request.urlopen') as mock_urlopen:
+            status_resp = MagicMock()
+            status_resp.read.return_value = b'{"object":{"actionCode":"00","approvalCode":"076298","rrn":"998877"}}'
+            status_resp.__enter__.return_value = status_resp
+            mock_urlopen.return_value = status_resp
+            verify_res = self.client.post('/api/payments/toucan/verify/', {
+                'invoice_number': invoice_number
+            }, content_type='application/json')
 
         self.assertEqual(verify_res.status_code, 200)
         v_data = verify_res.json()
@@ -140,7 +148,7 @@ class ToucanPayIntegrationTests(TestCase):
         # Check enrollment created
         self.assertTrue(Enrollment.objects.filter(user=self.user, course=self.course, is_active=True).exists())
 
-    @patch('apps.orders.toucanpay_service.urllib.request.build_opener')
+    @patch('apps.payment_hub.providers.toucan.urllib.request.build_opener')
     def test_webhook_callback(self, mock_build_opener):
         mock_opener = MagicMock()
         mock_resp = MagicMock()
@@ -150,7 +158,8 @@ class ToucanPayIntegrationTests(TestCase):
         mock_build_opener.return_value = mock_opener
 
         init_res = self.client.post('/api/payments/toucan/initiate/', {
-            'course_ids': [self.course.id]
+            'course_ids': [self.course.id],
+            'phone': '9876543210',
         }, content_type='application/json')
         invoice_number = init_res.json()['invoice_number']
         order_id = init_res.json()['order_id']
@@ -170,4 +179,26 @@ class ToucanPayIntegrationTests(TestCase):
         order = Order.objects.get(id=order_id)
         self.assertEqual(order.status, 'completed')
         self.assertTrue(Enrollment.objects.filter(user=self.user, course=self.course).exists())
+
+        again = self.client.post('/api/payments/toucan/callback/', {
+            'pspRefNo': invoice_number,
+            'status': 'SUCCESS',
+            'amount': '1999.00',
+            'rrn': 'RRN-99887766'
+        }, content_type='application/json')
+        self.assertEqual(again.status_code, 200)
+        self.assertEqual(Enrollment.objects.filter(user=self.user, course=self.course).count(), 1)
+
+    def test_free_enrollment_skips_toucan(self):
+        self.course.is_free = True
+        self.course.price = 0
+        self.course.save(update_fields=['is_free', 'price'])
+        response = self.client.post('/api/payments/toucan/initiate/', {
+            'course_ids': [self.course.id],
+        }, content_type='application/json')
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertTrue(data.get('free'))
+        self.assertFalse(PaymentTransaction.objects.filter(order_id=data['orderId']).exists())
+        self.assertTrue(Enrollment.objects.filter(user=self.user, course=self.course, is_active=True).exists())
 

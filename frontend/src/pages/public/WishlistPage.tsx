@@ -12,7 +12,8 @@ import {
   Sparkles
 } from 'lucide-react';
 import { useWishlist } from '../../context/WishlistContext';
-import { useCart } from '../../context/CartContext';
+import { CartAuthError, useCart } from '../../context/CartContext';
+import { apiErrorMessage } from '../../api/client';
 import { useCourses } from '../../context/CourseContext';
 import { useNotifications } from '../../context/NotificationContext';
 import { Button } from '../../components/ui/Button';
@@ -65,12 +66,22 @@ export const WishlistPage: React.FC = () => {
     return list;
   }, [wishlistedCourses, selectedCategory, sortBy]);
 
-  const handleMoveAllToCart = () => {
+  const handleMoveAllToCart = async () => {
     if (wishlistedCourses.length === 0) return;
-    wishlistedCourses.forEach(c => addToCart(c.id));
-    clearWishlist();
-    showToast('success', `Moved all ${wishlistedCourses.length} courses to your shopping cart!`);
-    navigate('/cart');
+    try {
+      for (const course of wishlistedCourses) {
+        await addToCart(course.id);
+      }
+      clearWishlist();
+      showToast('success', `Moved all ${wishlistedCourses.length} courses to your shopping cart.`);
+      navigate('/cart');
+    } catch (err) {
+      if (err instanceof CartAuthError) {
+        navigate('/signin?redirect=/wishlist');
+        return;
+      }
+      showToast('error', apiErrorMessage(err, 'Could not move these courses to the cart.'));
+    }
   };
 
   const handleConfirmClear = () => {

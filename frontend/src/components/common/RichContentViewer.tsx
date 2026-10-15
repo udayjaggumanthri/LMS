@@ -5,17 +5,56 @@ interface RichContentViewerProps {
   className?: string;
 }
 
+const ALLOWED_TAGS = new Set(['p', 'strong', 'em', 'b', 'i', 'a', 'ul', 'ol', 'li', 'code', 'pre', 'br', 'h1', 'h2', 'h3', 'h4', 'blockquote', 'span']);
+
+function sanitizeHtml(html: string): string {
+  const doc = new DOMParser().parseFromString(html, 'text/html');
+  const clean = (node: Node) => {
+    Array.from(node.childNodes).forEach((child) => {
+      if (child.nodeType !== Node.ELEMENT_NODE) return;
+      const el = child as HTMLElement;
+      const tag = el.tagName.toLowerCase();
+      if (!ALLOWED_TAGS.has(tag)) {
+        const parent = el.parentNode;
+        if (!parent) return;
+        while (el.firstChild) parent.insertBefore(el.firstChild, el);
+        parent.removeChild(el);
+        clean(parent);
+        return;
+      }
+      Array.from(el.attributes).forEach((attr) => {
+        const name = attr.name.toLowerCase();
+        if (name.startsWith('on') || name === 'style') {
+          el.removeAttribute(attr.name);
+          return;
+        }
+        if (tag === 'a' && name === 'href') {
+          if (!/^https?:\/\//i.test(attr.value.trim())) el.removeAttribute(attr.name);
+          return;
+        }
+        if (name !== 'class') el.removeAttribute(attr.name);
+      });
+      if (tag === 'a' && el.getAttribute('href')) {
+        el.setAttribute('target', '_blank');
+        el.setAttribute('rel', 'noopener noreferrer');
+      }
+      clean(el);
+    });
+  };
+  clean(doc.body);
+  return doc.body.innerHTML;
+}
+
 export const RichContentViewer: React.FC<RichContentViewerProps> = ({ content, className = '' }) => {
   if (!content) return null;
 
-  // Determine if content is rich HTML (contains HTML tags)
   const isHtml = /<[a-z][\s\S]*>/i.test(content);
 
   if (isHtml) {
     return (
       <div
-        className={`rich-content prose prose-slate max-w-none text-slate-800 text-sm sm:text-base leading-relaxed ${className}`}
-        dangerouslySetInnerHTML={{ __html: content }}
+        className={`rich-content max-w-none text-sm sm:text-base leading-relaxed [&_p]:mb-3 [&_ul]:my-3 [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:space-y-2 [&_ol]:my-3 [&_ol]:list-decimal [&_ol]:pl-5 [&_a]:text-emerald-700 [&_a]:underline [&_code]:rounded [&_code]:bg-slate-100 [&_code]:px-1 [&_code]:font-mono [&_code]:text-[0.9em] [&_strong]:font-semibold ${className}`}
+        dangerouslySetInnerHTML={{ __html: sanitizeHtml(content) }}
       />
     );
   }

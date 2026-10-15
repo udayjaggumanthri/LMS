@@ -34,6 +34,7 @@ export interface Category {
   courseCount: number;
   iconName: string;
   order?: number;
+  isTop?: boolean;
 }
 
 export type CourseLevel = 'Beginner' | 'Intermediate' | 'Expert' | 'Advanced' | 'Executive' | 'All Levels';
@@ -89,6 +90,8 @@ export interface Course {
   categoryId: string;
   subcategory: string;
   instructorId: string;
+  instructorIds?: string[];
+  instructors?: { id: string; name: string; title?: string }[];
   price: number; // in INR
   originalPrice: number; // in INR
   isFree?: boolean;
@@ -179,9 +182,11 @@ export interface Order {
   total: number;
   couponCode?: string;
   paymentMethod: 'card' | 'upi' | 'netbanking';
-  status: 'completed' | 'refunded';
+  status: 'pending' | 'completed' | 'failed' | 'cancelled' | 'refunded';
   createdAt: string;
   invoiceNumber: string;
+  gatewayInvoice?: string;
+  userEmail?: string;
 }
 
 export interface RefundRequest {

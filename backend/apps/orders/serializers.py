@@ -18,12 +18,25 @@ class OrderSerializer(serializers.ModelSerializer):
     couponCode = serializers.CharField(source='coupon_code', required=False)
     paymentMethod = serializers.CharField(source='payment_method')
     invoiceNumber = serializers.CharField(source='invoice_number')
+    gatewayInvoice = serializers.SerializerMethodField()
     createdAt = serializers.DateTimeField(source='created_at', format='%Y-%m-%d %H:%M')
+    userId = serializers.CharField(source='user_id', read_only=True)
+    userEmail = serializers.CharField(source='user.email', read_only=True)
 
     class Meta:
         model = Order
         fields = [
-            'id', 'orderNumber', 'subtotal', 'discount', 'total',
-            'couponCode', 'paymentMethod', 'status', 'invoiceNumber',
+            'id', 'orderNumber', 'userId', 'userEmail', 'subtotal', 'discount', 'total',
+            'couponCode', 'paymentMethod', 'status', 'invoiceNumber', 'gatewayInvoice',
             'createdAt', 'items'
         ]
+
+    def get_gatewayInvoice(self, order):
+        cached = getattr(order, '_prefetched_objects_cache', {}).get('transactions')
+        if cached is not None:
+            txn = cached[0] if cached else None
+        else:
+            txn = order.transactions.order_by('-id').first()
+        if txn is not None:
+            return txn.invoice_number
+        return order.payment_id or ''

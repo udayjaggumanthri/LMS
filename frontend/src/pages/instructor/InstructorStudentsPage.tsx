@@ -6,6 +6,7 @@ import { ProgressBar } from '../../components/ui/ProgressBar';
 import { Button } from '../../components/ui/Button';
 import { Modal } from '../../components/ui/Modal';
 import { useNotifications } from '../../context/NotificationContext';
+import { Avatar } from '../../components/ui/Avatar';
 import { Search, Download, Mail, Users, Award, TrendingUp, CheckCircle2 } from 'lucide-react';
 
 interface StudentRecord {
@@ -38,7 +39,7 @@ export const InstructorStudentsPage: React.FC = () => {
           id: String(s.id),
           name: s.name || `${s.first_name || ''} ${s.last_name || ''}`.trim() || s.username,
           email: s.email,
-          avatar: s.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150',
+          avatar: s.avatar || '/empty-cover.svg',
           courseTitle: courses[idx % (courses.length || 1)]?.title || 'Production Microservices in Go & Kubernetes',
           progressPercent: ((idx * 27 + 35) % 100),
           joinedDate: s.joinedAt ? new Date(s.joinedAt).toISOString().split('T')[0] : '2026-10-09',
@@ -104,11 +105,7 @@ export const InstructorStudentsPage: React.FC = () => {
       header: 'Learner Account',
       render: (s) => (
         <div className="flex items-center gap-3">
-          <img
-            src={s.avatar}
-            alt={s.name}
-            className="w-8 h-8 rounded object-cover border border-slate-200 shrink-0"
-          />
+          <Avatar name={s.name} size="sm" />
           <div>
             <div className="font-bold text-slate-900">{s.name}</div>
             <div className="text-[11px] text-slate-500">{s.email}</div>

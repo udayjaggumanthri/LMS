@@ -2,6 +2,8 @@ import React, { useState, useMemo } from 'react';
 import { useCourses } from '../../context/CourseContext';
 import { useAuth } from '../../context/AuthContext';
 import { useNotifications } from '../../context/NotificationContext';
+import { Avatar } from '../../components/ui/Avatar';
+import { userTeachesCourse } from '../../utils/courseFaculty';
 import { Button } from '../../components/ui/Button';
 import {
   MessageSquare,
@@ -21,7 +23,7 @@ export const InstructorQAInboxPage: React.FC = () => {
 
   const myCourses = useMemo(() => {
     return courses.filter(
-      c => c.instructorId === currentUser?.id || c.instructorId === 'inst-7'
+      c => currentUser?.role === 'admin' || userTeachesCourse(c, currentUser?.id)
     );
   }, [courses, currentUser]);
 
@@ -55,9 +57,9 @@ export const InstructorQAInboxPage: React.FC = () => {
     addQAAnswer(
       qId,
       replyText.trim(),
-      currentUser?.id || 'inst-7',
+      currentUser?.id || '',
       currentUser?.name || 'Instructor',
-      currentUser?.avatar || 'https://images.unsplash.com/photo-1567532939604-b6b5b0db2604?w=150',
+      '',
       true
     );
     showToast('success', 'Your instructor solution has been posted to the discussion thread!');
@@ -175,11 +177,7 @@ export const InstructorQAInboxPage: React.FC = () => {
               >
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex items-center gap-3">
-                    <img
-                      src={q.userAvatar}
-                      alt={q.userName}
-                      className="w-9 h-9 rounded-full object-cover border border-slate-200"
-                    />
+                    <Avatar name={q.userName} size="md" />
                     <div>
                       <div className="font-bold text-slate-900 text-sm">{q.userName}</div>
                       <div className="text-[11px] text-slate-500 font-medium">{courseTitle} &bull; {q.createdAt}</div>

@@ -176,7 +176,6 @@ export const CertificatesPage: React.FC = () => {
               <Logo size="md" />
               <div className="text-right text-[10px] text-slate-500 font-mono">
                 <div>SERIAL: {selectedCert.certificateNumber}</div>
-                <div>SECURE HASH: 9a7b...4f8c</div>
               </div>
             </div>
 
@@ -204,16 +203,16 @@ export const CertificatesPage: React.FC = () => {
             {/* Signature & Seal Block */}
             <div className="grid grid-cols-2 gap-8 pt-8 border-t border-slate-200 text-xs">
               <div className="text-left">
-                <div className="font-serif italic text-base text-slate-800">Neha Deshmukh</div>
+                <div className="font-serif italic text-base text-slate-800">PrajnadharaEdu</div>
                 <div className="border-t border-slate-400 w-36 mt-1 pt-1 font-bold text-[11px] text-slate-900">
-                  Lead Instructor
+                  Course Faculty
                 </div>
-                <div className="text-[10px] text-slate-500">PrajnadharaEdu Faculty</div>
+                <div className="text-[10px] text-slate-500">PrajnadharaEdu</div>
               </div>
               <div className="text-right">
-                <div className="font-serif italic text-base text-slate-800">Kavita Ramanathan</div>
+                <div className="font-serif italic text-base text-slate-800">Prajnadhara Infotech</div>
                 <div className="border-t border-slate-400 w-36 ml-auto mt-1 pt-1 font-bold text-[11px] text-slate-900">
-                  Academic Administrator
+                  Issuing Office
                 </div>
                 <div className="text-[10px] text-slate-500">Issued on {selectedCert.issueDate}</div>
               </div>

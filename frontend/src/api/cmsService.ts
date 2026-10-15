@@ -36,7 +36,15 @@ export const cmsService = {
 
   async getAdminPages(): Promise<CMSPageData[]> {
     const res = await apiClient.get('/admin/cms/pages/');
-    return res.data.results || res.data;
+    const data = res.data;
+    if (Array.isArray(data)) return data;
+    if (Array.isArray(data?.results)) return data.results;
+    return [];
+  },
+
+  async updatePage(slug: string, data: Partial<CMSPageData>): Promise<CMSPageData> {
+    const res = await apiClient.patch(`/admin/cms/pages/${slug}/`, data);
+    return res.data;
   },
 
   async updateSection(sectionId: number, data: Partial<CMSSectionData>): Promise<CMSSectionData> {

@@ -4,14 +4,26 @@ import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { Logo } from '../../components/common/Logo';
 import { CheckCircle2 } from 'lucide-react';
+import { authService } from '../../api/authService';
 
 export const ForgotPasswordPage: React.FC = () => {
   const [email, setEmail] = useState('');
   const [submitted, setSubmitted] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (email) setSubmitted(true);
+    setBusy(true);
+    setError('');
+    try {
+      await authService.forgotPassword(email.trim());
+      setSubmitted(true);
+    } catch {
+      setError('We could not send the reset email. Try again in a moment.');
+    } finally {
+      setBusy(false);
+    }
   };
 
   return (
@@ -32,7 +44,7 @@ export const ForgotPasswordPage: React.FC = () => {
             <CheckCircle2 className="w-10 h-10 text-emerald-700 mx-auto" />
             <h3 className="font-bold text-slate-900 text-sm">Reset Link Dispatched</h3>
             <p className="text-slate-600">
-              We sent a verification link to <strong>{email}</strong>. Please check your inbox and spam folder.
+              If an account exists for <strong>{email}</strong>, a reset link is on the way. Check your inbox and spam folder.
             </p>
             <div className="pt-2">
               <Link to="/signin">
@@ -53,7 +65,8 @@ export const ForgotPasswordPage: React.FC = () => {
               placeholder="you@domain.com"
             />
 
-            <Button type="submit" variant="primary" size="md" className="w-full">
+            {error && <p className="text-rose-700">{error}</p>}
+            <Button type="submit" variant="primary" size="md" className="w-full" isLoading={busy}>
               Send Password Reset Link &rarr;
             </Button>
           </form>

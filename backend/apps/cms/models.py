@@ -25,7 +25,7 @@ class PageSection(TimeStampedModel):
     title = models.CharField(max_length=300, blank=True, default='')
     subtitle = models.TextField(blank=True, default='')
     content = models.TextField(blank=True, default='')
-    media_url = models.URLField(max_length=500, blank=True, default='')
+    media_url = models.CharField(max_length=500, blank=True, default='')
     
     # CTA Action Links
     primary_btn_text = models.CharField(max_length=100, blank=True, default='')

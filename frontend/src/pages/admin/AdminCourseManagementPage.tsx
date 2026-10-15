@@ -1,30 +1,30 @@
-import React, { useState, useMemo } from 'react';
+import React, { useRef, useState, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   Search,
   Plus,
-  Sparkles,
   BookOpen,
   CheckCircle2,
   Clock,
-  Layers,
   Trash2,
   RotateCcw,
   Users,
-  ShieldCheck,
-  AlertCircle
+  Download,
+  Upload,
 } from 'lucide-react';
 import { useCourses } from '../../context/CourseContext';
-import { useAuth } from '../../context/AuthContext';
 import { useNotifications } from '../../context/NotificationContext';
 import { CourseManagementCard } from '../../components/courses/CourseManagementCard';
+import { courseService } from '../../api/courseService';
+import { apiErrorMessage } from '../../api/client';
 import { Course, CourseStatus } from '../../types';
 
 export const AdminCourseManagementPage: React.FC = () => {
   const navigate = useNavigate();
-  const { courses, categories, addCourse, updateCourse, deleteCourse, updateCourseStatus } = useCourses();
-  const { currentUser } = useAuth();
+  const { courses, categories, addCourse, updateCourse, deleteCourse, updateCourseStatus, reloadCourses } = useCourses();
   const { showToast } = useNotifications();
+  const importInputRef = useRef<HTMLInputElement>(null);
+  const [transferBusy, setTransferBusy] = useState<'export' | 'import' | null>(null);
 
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
@@ -54,18 +54,31 @@ export const AdminCourseManagementPage: React.FC = () => {
     });
   }, [courses, categoryFilter, statusFilter, searchTerm]);
 
-  const handlePublishToggle = (course: Course) => {
-    const nextStatus: CourseStatus = course.status === 'published' ? 'draft' : 'published';
-    updateCourseStatus(course.id, nextStatus);
-    showToast(
-      nextStatus === 'published'
-        ? `Masterclass "${course.title}" is now Live on the public Storefront!`
-        : `Course "${course.title}" reverted to Draft status.`,
-      'success'
-    );
+  const handleHomepageToggle = async (course: Course) => {
+    try {
+      await updateCourse(course.id, { featured: !course.featured });
+      showToast(!course.featured ? `"${course.title}" is on the homepage.` : `"${course.title}" was removed from the homepage.`, 'success');
+    } catch (err) {
+      showToast(apiErrorMessage(err, 'Could not update the homepage setting.'), 'error');
+    }
   };
 
-  const handleDuplicateCourse = (course: Course) => {
+  const handlePublishToggle = async (course: Course) => {
+    const nextStatus: CourseStatus = course.status === 'published' ? 'draft' : 'published';
+    try {
+      await updateCourseStatus(course.id, nextStatus);
+      showToast(
+        nextStatus === 'published'
+          ? `Masterclass "${course.title}" is now Live on the public Storefront!`
+          : `Course "${course.title}" reverted to Draft status.`,
+        'success'
+      );
+    } catch (err) {
+      showToast(apiErrorMessage(err, 'Could not update this course.'), 'error');
+    }
+  };
+
+  const handleDuplicateCourse = async (course: Course) => {
     const duplicate = {
       ...course,
       title: `${course.title} (Admin Copy)`,
@@ -74,17 +87,54 @@ export const AdminCourseManagementPage: React.FC = () => {
       studentCount: 0,
       rating: 0,
       reviewsCount: 0,
+      curriculum: course.curriculum || [],
     };
     delete (duplicate as any).id;
-    addCourse(duplicate as any);
-    showToast(`Masterclass duplicated into a draft.`, 'success');
+    try {
+      await addCourse(duplicate as any);
+      showToast('Masterclass duplicated into a draft.', 'success');
+    } catch (err) {
+      showToast(apiErrorMessage(err, 'Could not duplicate this course.'), 'error');
+    }
   };
 
-  const handleDeleteConfirmed = () => {
+  const handleExportCourses = async () => {
+    setTransferBusy('export');
+    try {
+      await courseService.exportCourses();
+      showToast(`Downloaded ${courses.length} courses as JSON.`, 'success');
+    } catch (err) {
+      showToast(apiErrorMessage(err, 'Could not export the courses.'), 'error');
+    } finally {
+      setTransferBusy(null);
+    }
+  };
+
+  const handleImportFile = async (file: File | undefined) => {
+    if (!file) return;
+    setTransferBusy('import');
+    try {
+      const result = await courseService.importCourses(file);
+      await reloadCourses();
+      const problems = result.errors?.length ? ` ${result.errors.length} could not be imported.` : '';
+      showToast(`Imported ${result.created} new and updated ${result.updated} existing courses.${problems}`, result.errors?.length ? 'info' : 'success');
+    } catch (err) {
+      showToast(apiErrorMessage(err, 'Could not import that course file.'), 'error');
+    } finally {
+      setTransferBusy(null);
+      if (importInputRef.current) importInputRef.current.value = '';
+    }
+  };
+
+  const handleDeleteConfirmed = async () => {
     if (!deleteConfirmCourse) return;
-    deleteCourse(deleteConfirmCourse.id);
-    showToast(`Course "${deleteConfirmCourse.title}" was removed from catalog.`, 'info');
-    setDeleteConfirmCourse(null);
+    try {
+      await deleteCourse(deleteConfirmCourse.id);
+      showToast(`Course "${deleteConfirmCourse.title}" was removed from catalog.`, 'info');
+      setDeleteConfirmCourse(null);
+    } catch (err) {
+      showToast(apiErrorMessage(err, 'Could not delete this course.'), 'error');
+    }
   };
 
   return (
@@ -100,13 +150,40 @@ export const AdminCourseManagementPage: React.FC = () => {
           </p>
         </div>
 
-        <Link
-          to="/admin/courses/new"
-          className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white text-xs font-bold shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-indigo-500"
-        >
-          <Plus className="w-4 h-4" />
-          <span>Create & Publish Course</span>
-        </Link>
+        <div className="flex flex-wrap items-center gap-2">
+          <input
+            ref={importInputRef}
+            type="file"
+            accept="application/json,.json"
+            className="hidden"
+            onChange={(event) => handleImportFile(event.target.files?.[0])}
+          />
+          <button
+            type="button"
+            onClick={handleExportCourses}
+            disabled={transferBusy !== null}
+            className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold disabled:opacity-60"
+          >
+            <Download className="w-4 h-4" />
+            <span>{transferBusy === 'export' ? 'Exporting…' : 'Export JSON'}</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => importInputRef.current?.click()}
+            disabled={transferBusy !== null}
+            className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold disabled:opacity-60"
+          >
+            <Upload className="w-4 h-4" />
+            <span>{transferBusy === 'import' ? 'Importing…' : 'Import JSON'}</span>
+          </button>
+          <Link
+            to="/admin/courses/new"
+            className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white text-xs font-bold shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Create & Publish Course</span>
+          </Link>
+        </div>
       </div>
 
       {/* KPI Metric Cards (Matching Screenshot 5) */}
@@ -237,6 +314,7 @@ export const AdminCourseManagementPage: React.FC = () => {
             onEdit={() => navigate(`/admin/courses/${course.id}/edit`)}
             onDelete={() => setDeleteConfirmCourse(course)}
             onPublishToggle={handlePublishToggle}
+            onHomepageToggle={handleHomepageToggle}
             onDuplicate={handleDuplicateCourse}
           />
         ))}

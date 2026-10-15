@@ -24,47 +24,93 @@ import {
   Plus
 } from 'lucide-react';
 import { useCourses } from '../../context/CourseContext';
+import { courseService } from '../../api/courseService';
 import { useLearning } from '../../context/LearningContext';
-import { useAuth } from '../../context/AuthContext';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { ProgressBar } from '../../components/ui/ProgressBar';
 import { Modal } from '../../components/ui/Modal';
 import { Rating } from '../../components/ui/Rating';
-import { Lecture } from '../../types';
+import { Course, Lecture, QAQuestion, Review } from '../../types';
+import { RichContentViewer } from '../../components/common/RichContentViewer';
 
 export const CoursePlayerPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { courses, qaQuestions, addQAQuestion, reviews, addReview } = useCourses();
+  const { courses } = useCourses();
   const {
     enrollments,
     markLectureCompleted,
     unmarkLectureCompleted,
-    getCourseProgressPercent,
     notes,
     addNote,
     deleteNote,
     claimCertificate,
     certificates
   } = useLearning();
-  const { currentUser } = useAuth();
+  const [detailCourse, setDetailCourse] = useState<Course | null>(null);
+  const [playerStatus, setPlayerStatus] = useState<'loading' | 'ready' | 'missing'>('loading');
+  const [playerReviews, setPlayerReviews] = useState<Review[]>([]);
+  const [playerQA, setPlayerQA] = useState<QAQuestion[]>([]);
+  const [announcements, setAnnouncements] = useState<{ id: number; title: string; body: string; authorName: string; createdAt: string }[]>([]);
+  const [noteError, setNoteError] = useState('');
+  const [currentLectureIndex, setCurrentLectureIndex] = useState(0);
 
-  const course = courses.find(c => c.id === id) || courses[0];
+  useEffect(() => {
+    let cancelled = false;
+    setPlayerStatus('loading');
+    setDetailCourse(null);
+    setCurrentLectureIndex(0);
+    if (!id) {
+      setPlayerStatus('missing');
+      return;
+    }
+    courseService.getCourseBySlug(id)
+      .then((row) => {
+        if (cancelled) return;
+        setDetailCourse(row || null);
+        setPlayerStatus(row ? 'ready' : 'missing');
+      })
+      .catch(() => {
+        if (!cancelled) setPlayerStatus('missing');
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [id]);
+
+  useEffect(() => {
+    if (!id) return;
+    let cancelled = false;
+    Promise.all([
+      courseService.getReviews(id).catch(() => []),
+      courseService.getQA(id).catch(() => []),
+      courseService.getAnnouncements(id).catch(() => []),
+    ]).then(([reviewRows, qaRows, announcementRows]) => {
+      if (cancelled) return;
+      setPlayerReviews(Array.isArray(reviewRows) ? reviewRows : []);
+      setPlayerQA(Array.isArray(qaRows) ? qaRows : []);
+      setAnnouncements(Array.isArray(announcementRows) ? announcementRows : []);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [id]);
+
+  const course = detailCourse || courses.find(c => String(c.id) === String(id));
+  const sameId = (left: unknown, right: unknown) => String(left) === String(right);
+  const isLectureDone = (lectureId: string | number) => completedLectureIds.some((item) => sameId(item, lectureId));
   const progressData = enrollments[course?.id || ''];
   const completedLectureIds = progressData?.completedLectureIds || [];
 
-  // Flatten lectures for navigation
   const allLectures: { sectionTitle: string; lecture: Lecture }[] = [];
-  course.curriculum.forEach(section => {
-    section.lectures.forEach(lecture => {
+  (course?.curriculum || []).forEach(section => {
+    (section.lectures || []).forEach(lecture => {
       allLectures.push({ sectionTitle: section.title, lecture });
     });
   });
-
-  const [currentLectureIndex, setCurrentLectureIndex] = useState(0);
   const currentItem = allLectures[currentLectureIndex] || allLectures[0];
-  const currentLecture = currentItem.lecture;
+  const currentLecture = currentItem?.lecture;
 
   // Video state
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -92,10 +138,30 @@ export const CoursePlayerPage: React.FC = () => {
   const [reviewRating, setReviewRating] = useState(5);
   const [reviewComment, setReviewComment] = useState('');
 
-  const courseProgress = getCourseProgressPercent(course.id);
-  const courseNotes = notes.filter(n => n.courseId === course.id);
-  const courseQA = qaQuestions.filter(q => q.courseId === course.id);
-  const courseReviews = reviews.filter(r => r.courseId === course.id);
+  if (playerStatus === 'loading') {
+    return (
+      <div className="min-h-screen bg-slate-950 text-white flex items-center justify-center p-6">
+        <p className="text-sm text-slate-300">Opening your course…</p>
+      </div>
+    );
+  }
+
+  if (!course || !currentLecture) {
+    return (
+      <div className="min-h-screen bg-slate-950 text-white flex items-center justify-center p-6">
+        <div className="text-center">
+          <h1 className="text-lg font-semibold">This course is not available.</h1>
+          <Link to="/student/my-learning" className="mt-3 inline-block text-sm text-emerald-300">Back to My Learning</Link>
+        </div>
+      </div>
+    );
+  }
+
+  const finishedCount = completedLectureIds.filter((item) => allLectures.some((row) => sameId(row.lecture.id, item))).length;
+  const courseProgress = allLectures.length ? Math.min(100, Math.round((finishedCount / allLectures.length) * 100)) : 0;
+  const lectureNotes = notes.filter((note) => sameId(note.courseId, course.id) && currentLecture && sameId(note.lectureId, currentLecture.id));
+  const courseQA = playerQA;
+  const courseReviews = playerReviews;
   const userCertificate = certificates.find(c => c.courseId === course.id);
 
   // Video event listeners
@@ -132,60 +198,58 @@ export const CoursePlayerPage: React.FC = () => {
     }
   };
 
+  const markCurrentIfNeeded = async () => {
+    if (!currentLecture || isLectureDone(currentLecture.id)) return;
+    await markLectureCompleted(course.id, currentLecture.id);
+  };
+
   const handleNextLecture = () => {
     if (currentLectureIndex < allLectures.length - 1) {
-      // Mark current complete when moving forward
-      markLectureCompleted(course.id, currentLecture.id);
+      markCurrentIfNeeded().catch(() => setNoteError('Could not save your progress.'));
       setCurrentLectureIndex(currentLectureIndex + 1);
       setIsPlaying(false);
     }
   };
 
   const toggleLectureCompletion = (lectureId: string) => {
-    if (completedLectureIds.includes(lectureId)) {
-      unmarkLectureCompleted(course.id, lectureId);
-    } else {
-      markLectureCompleted(course.id, lectureId);
-    }
+    const action = isLectureDone(lectureId)
+      ? unmarkLectureCompleted(course.id, lectureId)
+      : markLectureCompleted(course.id, lectureId);
+    action.catch(() => setNoteError('Could not save your progress.'));
   };
 
   const handleAddNote = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newNoteText.trim()) return;
-    addNote(course.id, currentLecture.id, currentLecture.title, Math.floor(currentTime), newNoteText);
-    setNewNoteText('');
+    if (!newNoteText.trim() || !currentLecture) return;
+    setNoteError('');
+    addNote(course.id, currentLecture.id, currentLecture.title, Math.floor(currentTime), newNoteText)
+      .then(() => setNewNoteText(''))
+      .catch(() => setNoteError('Could not save this note.'));
   };
 
   const handleAddQuestion = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newQTitle.trim()) return;
-    addQAQuestion({
-      courseId: course.id,
-      lectureId: currentLecture.id,
-      userId: currentUser?.id || 'anon',
-      userName: currentUser?.name || 'Student',
-      userAvatar: currentUser?.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150',
-      title: newQTitle,
-      content: newQContent
-    });
-    setNewQTitle('');
-    setNewQContent('');
-    setQaModalOpen(false);
+    courseService.addQAQuestion(course.id, { title: newQTitle, content: newQContent })
+      .then((saved) => {
+        setPlayerQA((prev) => [{ ...saved, answers: saved.answers || [] }, ...prev]);
+        setNewQTitle('');
+        setNewQContent('');
+        setQaModalOpen(false);
+      })
+      .catch(() => setNoteError('Could not post your question.'));
   };
 
   const handleAddReview = (e: React.FormEvent) => {
     e.preventDefault();
     if (!reviewComment.trim()) return;
-    addReview({
-      courseId: course.id,
-      userId: currentUser?.id || 'anon',
-      userName: currentUser?.name || 'Student',
-      userAvatar: currentUser?.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150',
-      rating: reviewRating,
-      comment: reviewComment
-    });
-    setReviewComment('');
-    setReviewModalOpen(false);
+    courseService.addReview(course.id, { rating: reviewRating, comment: reviewComment })
+      .then((saved) => {
+        setPlayerReviews((prev) => [saved, ...prev.filter((row) => String(row.id) !== String(saved.id))]);
+        setReviewComment('');
+        setReviewModalOpen(false);
+      })
+      .catch(() => setNoteError('Could not save your review.'));
   };
 
   const handleClaimCertificate = () => {
@@ -266,7 +330,9 @@ export const CoursePlayerPage: React.FC = () => {
         {/* Video & Tabs Workspace */}
         <div className="flex-1 flex flex-col bg-slate-900 overflow-y-auto">
           {/* Video Container */}
-          <div className="bg-black relative aspect-video max-h-[65vh] w-full flex items-center justify-center">
+          <div className={currentLecture.type === 'article'
+            ? 'bg-slate-950 w-full max-h-[70vh] overflow-y-auto'
+            : 'bg-black relative aspect-video max-h-[65vh] w-full flex items-center justify-center'}>
             {currentLecture.type === 'quiz' ? (
               <div className="p-8 text-center max-w-md space-y-4">
                 <HelpCircle className="w-12 h-12 text-emerald-400 mx-auto" />
@@ -286,21 +352,32 @@ export const CoursePlayerPage: React.FC = () => {
                 </div>
               </div>
             ) : currentLecture.type === 'article' ? (
-              <div className="p-8 max-w-2xl text-left bg-slate-950 border border-slate-800 rounded m-4 overflow-y-auto max-h-[85%] text-xs text-slate-200 space-y-3">
-                <h3 className="text-base font-bold text-white font-display">{currentLecture.title}</h3>
-                <p className="leading-relaxed whitespace-pre-line">
-                  {currentLecture.content || 'Read through the architectural specifications carefully before proceeding to the coding section.'}
-                </p>
-                <div className="pt-4 border-t border-slate-800">
+              <article className="mx-4 my-4 max-w-3xl rounded border border-slate-200 bg-white p-6 text-left text-slate-800 sm:mx-auto sm:my-6 sm:p-8">
+                <h3 className="mb-4 text-lg font-bold font-display text-slate-950">{currentLecture.title}</h3>
+                {currentLecture.content ? (
+                  <RichContentViewer content={currentLecture.content} className="text-slate-800" />
+                ) : (
+                  <p className="text-sm leading-relaxed text-slate-600">This lesson is ready. Mark it complete when you want to continue.</p>
+                )}
+                <div className="mt-6 border-t border-slate-200 pt-4">
                   <Button
                     variant="primary"
                     size="sm"
-                    onClick={() => markLectureCompleted(course.id, currentLecture.id)}
+                    onClick={() => {
+                      markCurrentIfNeeded()
+                        .then(() => {
+                          if (currentLectureIndex < allLectures.length - 1) {
+                            setCurrentLectureIndex(currentLectureIndex + 1);
+                            setIsPlaying(false);
+                          }
+                        })
+                        .catch(() => setNoteError('Could not save your progress.'));
+                    }}
                   >
                     Mark as Completed & Continue
                   </Button>
                 </div>
-              </div>
+              </article>
             ) : (
               <>
                 <video
@@ -393,7 +470,7 @@ export const CoursePlayerPage: React.FC = () => {
                 onClick={() => setActiveTab('notes')}
                 className={`transition-colors whitespace-nowrap ${activeTab === 'notes' ? 'text-emerald-400 border-b-2 border-emerald-400 pb-3 -mb-3' : 'text-slate-400 hover:text-white'}`}
               >
-                Notes ({courseNotes.length})
+                Notes ({lectureNotes.length})
               </button>
               <button
                 onClick={() => setActiveTab('announcements')}
@@ -417,19 +494,30 @@ export const CoursePlayerPage: React.FC = () => {
 
             {/* Tab 1: Overview */}
             {activeTab === 'overview' && (
-              <div className="pt-6 text-xs text-slate-300 space-y-4 max-w-3xl leading-relaxed">
+              <div className="pt-6 text-sm text-slate-300 space-y-4 max-w-3xl leading-relaxed">
                 <div>
-                  <h3 className="font-bold text-sm text-white mb-1">About This Lecture</h3>
-                  <p>{currentLecture.title} is part of {currentItem.sectionTitle}.</p>
+                  <h3 className="font-bold text-white mb-1">{currentLecture.title}</h3>
+                  <p className="text-xs text-slate-400">Part of {currentItem.sectionTitle}</p>
                 </div>
-                <div>
-                  <h4 className="font-bold text-xs text-white uppercase tracking-wider mb-2">What you will master</h4>
-                  <ul className="space-y-1.5 list-disc list-inside text-slate-400">
-                    {course.whatYouWillLearn.slice(0, 3).map((w, i) => (
-                      <li key={i}>{w}</li>
-                    ))}
-                  </ul>
-                </div>
+                {course.description ? (
+                  /<[a-z][\s\S]*>/i.test(course.description) ? (
+                    <RichContentViewer content={course.description} className="text-slate-200 [&_p]:text-slate-200" />
+                  ) : (
+                    <p className="whitespace-pre-line text-slate-300">{course.description}</p>
+                  )
+                ) : (
+                  course.subtitle ? <p>{course.subtitle}</p> : null
+                )}
+                {(course.whatYouWillLearn || []).length > 0 && (
+                  <div>
+                    <h4 className="font-bold text-xs text-white uppercase tracking-wider mb-2">What you will learn</h4>
+                    <ul className="space-y-1.5 list-disc list-inside text-slate-300">
+                      {course.whatYouWillLearn.map((item, index) => (
+                        <li key={index}>{item}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
               </div>
             )}
 
@@ -451,6 +539,7 @@ export const CoursePlayerPage: React.FC = () => {
                 </div>
 
                 <div className="space-y-3">
+                  {courseQA.length === 0 && <p className="text-xs text-slate-400">No questions yet. Ask the first one.</p>}
                   {courseQA.map((q) => (
                     <div key={q.id} className="p-4 bg-slate-950 border border-slate-800 rounded text-xs space-y-2">
                       <div className="flex items-center justify-between text-slate-400">
@@ -460,7 +549,7 @@ export const CoursePlayerPage: React.FC = () => {
                       <h4 className="font-bold text-white text-sm">{q.title}</h4>
                       <p className="text-slate-300 leading-relaxed">{q.content}</p>
 
-                      {q.answers.map((ans) => (
+                      {(q.answers || []).map((ans) => (
                         <div key={ans.id} className="mt-3 p-3 bg-slate-900 border-l-2 border-emerald-500 rounded-r text-xs">
                           <div className="font-bold text-white flex items-center gap-1.5 mb-1">
                             <span>{ans.userName}</span>
@@ -501,7 +590,9 @@ export const CoursePlayerPage: React.FC = () => {
                 </form>
 
                 <div className="space-y-2 pt-2">
-                  {courseNotes.map((note) => (
+                  {noteError && <p className="text-xs text-rose-300">{noteError}</p>}
+                  {lectureNotes.length === 0 && <p className="text-xs text-slate-400">No notes for this lesson yet.</p>}
+                  {lectureNotes.map((note) => (
                     <div key={note.id} className="p-3 bg-slate-950 border border-slate-800 rounded flex items-start justify-between text-xs gap-4">
                       <div>
                         <button
@@ -532,15 +623,17 @@ export const CoursePlayerPage: React.FC = () => {
             {/* Tab 4: Announcements */}
             {activeTab === 'announcements' && (
               <div className="pt-6 space-y-3 max-w-3xl text-xs text-slate-300">
-                <div className="p-4 bg-slate-950 border border-slate-800 rounded space-y-1">
-                  <div className="flex items-center justify-between text-slate-400">
-                    <span className="font-bold text-white">Course Curriculum Update for React 19</span>
-                    <span>1 week ago</span>
+                {announcements.length === 0 && <p className="text-slate-400">No announcements for this course yet.</p>}
+                {announcements.map((item) => (
+                  <div key={item.id} className="p-4 bg-slate-950 border border-slate-800 rounded space-y-1">
+                    <div className="flex flex-wrap items-center justify-between gap-2 text-slate-400">
+                      <span className="font-bold text-white">{item.title}</span>
+                      <span>{item.createdAt}</span>
+                    </div>
+                    <p className="text-slate-300 leading-relaxed pt-1 whitespace-pre-line">{item.body}</p>
+                    {item.authorName && <p className="text-[11px] text-slate-500">Posted by {item.authorName}</p>}
                   </div>
-                  <p className="text-slate-300 leading-relaxed pt-1">
-                    Welcome to the 2026 revision! We updated Section 2 with new lectures on the React Compiler and Actions. Downloadable repositories on GitHub have been synchronized.
-                  </p>
-                </div>
+                ))}
               </div>
             )}
 
@@ -557,6 +650,7 @@ export const CoursePlayerPage: React.FC = () => {
                 </div>
 
                 <div className="space-y-3">
+                  {courseReviews.length === 0 && <p className="text-xs text-slate-400">No reviews yet.</p>}
                   {courseReviews.map((r) => (
                     <div key={r.id} className="p-4 bg-slate-950 border border-slate-800 rounded text-xs space-y-1">
                       <div className="flex items-center justify-between">
@@ -573,24 +667,22 @@ export const CoursePlayerPage: React.FC = () => {
             {/* Tab 6: Resources */}
             {activeTab === 'resources' && (
               <div className="pt-6 space-y-2 max-w-3xl text-xs">
-                <div className="p-3 bg-slate-950 border border-slate-800 rounded flex items-center justify-between">
-                  <div>
-                    <span className="font-bold text-white block">production-architecture-v1.zip</span>
-                    <span className="text-slate-500 text-[11px]">8.2 MB · Complete Source Code</span>
+                {(currentLecture.resources || []).length === 0 && (
+                  <p className="text-slate-400">No files for this lesson yet.</p>
+                )}
+                {(currentLecture.resources || []).map((file) => (
+                  <div key={file.id} className="p-3 bg-slate-950 border border-slate-800 rounded flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <span className="font-bold text-white block">{file.name}</span>
+                      {file.size && <span className="text-slate-500 text-[11px]">{file.size}</span>}
+                    </div>
+                    <a href={file.url} target="_blank" rel="noopener noreferrer">
+                      <Button variant="outline" size="sm" leftIcon={<Download className="w-3 h-3" />}>
+                        Download
+                      </Button>
+                    </a>
                   </div>
-                  <Button variant="outline" size="sm" leftIcon={<Download className="w-3 h-3" />}>
-                    Download
-                  </Button>
-                </div>
-                <div className="p-3 bg-slate-950 border border-slate-800 rounded flex items-center justify-between">
-                  <div>
-                    <span className="font-bold text-white block">react19-compiler-reference-guide.pdf</span>
-                    <span className="text-slate-500 text-[11px]">1.4 MB · Architecture Cheatsheet</span>
-                  </div>
-                  <Button variant="outline" size="sm" leftIcon={<Download className="w-3 h-3" />}>
-                    Download
-                  </Button>
-                </div>
+                ))}
               </div>
             )}
           </div>
@@ -616,7 +708,7 @@ export const CoursePlayerPage: React.FC = () => {
                   </div>
                   <div className="divide-y divide-slate-900">
                     {section.lectures.map((lecture) => {
-                      const isCompleted = completedLectureIds.includes(lecture.id);
+                      const isCompleted = isLectureDone(lecture.id);
                       const isSelected = lecture.id === currentLecture.id;
                       const globalIdx = allLectures.findIndex(l => l.lecture.id === lecture.id);
 

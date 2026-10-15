@@ -30,6 +30,8 @@ export const AdminVisualPageEditorPage: React.FC = () => {
   const [activeSectionId, setActiveSectionId] = useState<number | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [saving, setSaving] = useState<boolean>(false);
+  const [loadError, setLoadError] = useState<string>('');
+  const [pageTitle, setPageTitle] = useState<string>('');
 
   // New Section Modal State
   const [isNewSectionModalOpen, setIsNewSectionModalOpen] = useState<boolean>(false);
@@ -54,15 +56,18 @@ export const AdminVisualPageEditorPage: React.FC = () => {
       setLoading(true);
       const data = await cmsService.getAdminPages();
       setPages(data);
+      setLoadError('');
       if (data.length > 0) {
         const home = data.find(p => p.slug === 'home') || data[0];
         setSelectedPageSlug(home.slug);
+        setPageTitle(home.title);
         if (home.sections.length > 0) {
           selectSection(home.sections[0]);
         }
       }
     } catch (err) {
-      console.error('Failed to load CMS pages', err);
+      setLoadError('The page list could not be loaded. Refresh and try again.');
+      showToast('error', 'The page list could not be loaded.');
     } finally {
       setLoading(false);
     }
@@ -82,12 +87,15 @@ export const AdminVisualPageEditorPage: React.FC = () => {
       primaryBtnLink: sec.primaryBtnLink || '',
       secondaryBtnText: sec.secondaryBtnText || '',
       secondaryBtnLink: sec.secondaryBtnLink || '',
+      jsonData: sec.jsonData || {},
+      order: sec.order || 0,
     });
   };
 
   const handlePageChange = (slug: string) => {
     setSelectedPageSlug(slug);
     const target = pages.find(p => p.slug === slug);
+    setPageTitle(target?.title || '');
     if (target && target.sections.length > 0) {
       selectSection(target.sections[0]);
     } else {
@@ -160,6 +168,39 @@ export const AdminVisualPageEditorPage: React.FC = () => {
     }
   };
 
+  const handleSavePageTitle = async () => {
+    if (!currentPage || !pageTitle.trim()) return;
+    try {
+      const updated = await cmsService.updatePage(currentPage.slug, { title: pageTitle.trim() });
+      setPages(prev => prev.map(page => page.slug === currentPage.slug ? { ...page, title: updated.title } : page));
+      showToast('success', 'Page name saved.');
+    } catch {
+      showToast('error', 'Could not save the page name.');
+    }
+  };
+
+  const moveSection = async (sectionId: number, direction: -1 | 1) => {
+    if (!currentPage) return;
+    const ordered = [...currentPage.sections];
+    const index = ordered.findIndex(section => section.id === sectionId);
+    const swapIndex = index + direction;
+    if (index < 0 || swapIndex < 0 || swapIndex >= ordered.length) return;
+    const current = ordered[index];
+    const other = ordered[swapIndex];
+    try {
+      await Promise.all([
+        cmsService.updateSection(current.id, { order: other.order ?? swapIndex }),
+        cmsService.updateSection(other.id, { order: current.order ?? index }),
+      ]);
+      const next = [...ordered];
+      next[index] = { ...other, order: current.order ?? index };
+      next[swapIndex] = { ...current, order: other.order ?? swapIndex };
+      setPages(prev => prev.map(page => page.slug === currentPage.slug ? { ...page, sections: next } : page));
+    } catch {
+      showToast('error', 'Could not reorder that section.');
+    }
+  };
+
   const handleDeleteSection = async () => {
     if (!activeSectionId) return;
     const currentSec = currentPage?.sections.find(s => s.id === activeSectionId);
@@ -194,7 +235,7 @@ export const AdminVisualPageEditorPage: React.FC = () => {
               Universal Visual Page Editor (CMS)
             </h1>
             <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-emerald-100 text-emerald-900 border border-emerald-300">
-              All 8 Pages
+              {pages.length} {pages.length === 1 ? 'page' : 'pages'}
             </span>
           </div>
           <p className="text-xs text-slate-500 mt-1">
@@ -207,10 +248,11 @@ export const AdminVisualPageEditorPage: React.FC = () => {
           <div className="flex items-center gap-2">
             <span className="text-xs font-semibold text-slate-600">Select Page:</span>
             <select
-              value={selectedPageSlug}
+              value={pages.some(page => page.slug === selectedPageSlug) ? selectedPageSlug : ''}
               onChange={(e) => handlePageChange(e.target.value)}
-              className="bg-white border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-700"
+              className="min-w-[240px] bg-white border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-700"
             >
+              {pages.length === 0 && <option value="">No pages yet</option>}
               {pages.map(p => (
                 <option key={p.slug} value={p.slug}>
                   {p.title} (/{p.slug})
@@ -230,6 +272,12 @@ export const AdminVisualPageEditorPage: React.FC = () => {
           </a>
         </div>
       </div>
+
+      {loadError && (
+        <div className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">
+          {loadError}
+        </div>
+      )}
 
       {loading ? (
         <div className="p-12 text-center text-slate-500 text-xs">
@@ -269,7 +317,25 @@ export const AdminVisualPageEditorPage: React.FC = () => {
                   >
                     <div className="flex items-center justify-between text-[11px] mb-1 font-mono text-slate-400">
                       <span>Section #{idx + 1} &bull; {sec.sectionKey}</span>
-                      {isSelected && <span className="text-emerald-700 font-bold">Editing Now</span>}
+                      <span className="flex items-center gap-1">
+                        <span
+                          role="button"
+                          onClick={(event) => { event.stopPropagation(); moveSection(sec.id, -1); }}
+                          className="p-0.5 hover:text-slate-700"
+                          title="Move up"
+                        >
+                          <ChevronUp className="w-3.5 h-3.5" />
+                        </span>
+                        <span
+                          role="button"
+                          onClick={(event) => { event.stopPropagation(); moveSection(sec.id, 1); }}
+                          className="p-0.5 hover:text-slate-700"
+                          title="Move down"
+                        >
+                          <ChevronDown className="w-3.5 h-3.5" />
+                        </span>
+                        {isSelected && <span className="text-emerald-700 font-bold">Editing</span>}
+                      </span>
                     </div>
                     <div className="font-bold text-xs truncate text-slate-900">{sec.sectionName || sec.title}</div>
                     <div className="text-[11px] text-slate-500 truncate mt-0.5">{sec.title}</div>
@@ -281,6 +347,20 @@ export const AdminVisualPageEditorPage: React.FC = () => {
 
           {/* Right Column: Live Section Editor Form & Preview */}
           <div className="lg:col-span-8 space-y-6">
+            {currentPage && (
+              <div className="flex flex-col sm:flex-row sm:items-end gap-3 p-4 bg-white border border-slate-200 rounded-lg">
+                <div className="flex-1">
+                  <Input
+                    label="Page name"
+                    value={pageTitle}
+                    onChange={(event) => setPageTitle(event.target.value)}
+                  />
+                </div>
+                <Button type="button" variant="secondary" size="sm" onClick={handleSavePageTitle}>
+                  Save page name
+                </Button>
+              </div>
+            )}
             {activeSectionId ? (
               <form onSubmit={handleSaveSection} className="p-6 bg-white border border-slate-200 rounded-lg space-y-5 text-xs shadow-xs">
                 <div className="flex items-center justify-between pb-3 border-b border-slate-100">
@@ -347,6 +427,35 @@ export const AdminVisualPageEditorPage: React.FC = () => {
                     />
                   </div>
 
+                  {Array.isArray(editFormData.jsonData?.items) && (
+                    <div className="space-y-3 rounded-lg border border-slate-200 p-3">
+                      <div className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Question list</div>
+                      {editFormData.jsonData.items.map((item: { title?: string; content?: string }, index: number) => (
+                        <div key={index} className="space-y-2">
+                          <Input
+                            label={`Question ${index + 1}`}
+                            value={item.title || ''}
+                            onChange={(event) => {
+                              const items = [...(editFormData.jsonData?.items || [])];
+                              items[index] = { ...items[index], title: event.target.value };
+                              setEditFormData({ ...editFormData, jsonData: { ...editFormData.jsonData, items } });
+                            }}
+                          />
+                          <textarea
+                            rows={3}
+                            value={item.content || ''}
+                            onChange={(event) => {
+                              const items = [...(editFormData.jsonData?.items || [])];
+                              items[index] = { ...items[index], content: event.target.value };
+                              setEditFormData({ ...editFormData, jsonData: { ...editFormData.jsonData, items } });
+                            }}
+                            className="w-full bg-slate-50 border border-slate-300 rounded p-2.5 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-700"
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
                   <RichTextEditor
                     label="Section Body / Long-Form Rich Content"
                     value={editFormData.content || ''}
@@ -401,6 +510,9 @@ export const AdminVisualPageEditorPage: React.FC = () => {
                     <span>Live In-Page Rendering Simulation</span>
                   </div>
                   <div className="p-6 bg-slate-900 text-white rounded-lg space-y-3">
+                    {editFormData.mediaUrl && (
+                      <img src={editFormData.mediaUrl} alt="" className="h-28 w-full object-cover rounded-md bg-slate-800" />
+                    )}
                     {editFormData.badgeText && (
                       <span className="inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-emerald-500/20 text-emerald-300 border border-emerald-400/30">
                         {editFormData.badgeText}

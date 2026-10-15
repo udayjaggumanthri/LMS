@@ -10,12 +10,12 @@ import {
   Sparkles,
   Tag,
   ChevronRight,
-  TrendingUp,
-  User
+  TrendingUp
 } from 'lucide-react';
 import { blogService, BlogPostItem } from '../../api/blogService';
 import { Breadcrumbs } from '../../components/ui/Breadcrumbs';
 import { Button } from '../../components/ui/Button';
+import { Avatar } from '../../components/ui/Avatar';
 
 export const BlogListPage: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -166,7 +166,7 @@ export const BlogListPage: React.FC = () => {
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-0">
                   <div className="lg:col-span-7 aspect-video lg:aspect-auto overflow-hidden bg-slate-900 relative">
                     <img
-                      src={featuredPost.coverImage || 'https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=1000'}
+                      src={featuredPost.coverImage || '/empty-cover.svg'}
                       alt={featuredPost.title}
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                     />
@@ -202,17 +202,7 @@ export const BlogListPage: React.FC = () => {
 
                     <div className="pt-6 border-t border-slate-100 mt-6 flex items-center justify-between">
                       <div className="flex items-center gap-3">
-                        {featuredPost.authorAvatar ? (
-                          <img
-                            src={featuredPost.authorAvatar}
-                            alt={featuredPost.authorName}
-                            className="w-9 h-9 rounded-full object-cover border border-slate-200"
-                          />
-                        ) : (
-                          <div className="w-9 h-9 rounded-full bg-emerald-100 text-emerald-800 flex items-center justify-center font-bold text-xs">
-                            {featuredPost.authorName.charAt(0)}
-                          </div>
-                        )}
+                        <Avatar name={featuredPost.authorName} size="md" />
                         <div>
                           <div className="text-xs font-bold text-slate-900">{featuredPost.authorName}</div>
                           <div className="text-[11px] text-slate-500">{featuredPost.authorRole || 'Author'}</div>
@@ -253,7 +243,7 @@ export const BlogListPage: React.FC = () => {
                       {/* Thumbnail */}
                       <Link to={`/blog/${article.slug}`} className="block aspect-video overflow-hidden bg-slate-900 relative">
                         <img
-                          src={article.coverImage || 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=800'}
+                          src={article.coverImage || '/empty-cover.svg'}
                           alt={article.title}
                           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                         />
@@ -293,17 +283,7 @@ export const BlogListPage: React.FC = () => {
                         {/* Author info & Read link */}
                         <div className="pt-4 border-t border-slate-100 mt-4 flex items-center justify-between">
                           <div className="flex items-center gap-2">
-                            {article.authorAvatar ? (
-                              <img
-                                src={article.authorAvatar}
-                                alt={article.authorName}
-                                className="w-7 h-7 rounded-full object-cover border border-slate-200"
-                              />
-                            ) : (
-                              <div className="w-7 h-7 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 flex items-center justify-center font-bold text-[10px]">
-                                {article.authorName.charAt(0)}
-                              </div>
-                            )}
+                            <Avatar name={article.authorName} size="sm" />
                             <div className="text-xs font-semibold text-slate-800 truncate max-w-[120px]">
                               {article.authorName}
                             </div>

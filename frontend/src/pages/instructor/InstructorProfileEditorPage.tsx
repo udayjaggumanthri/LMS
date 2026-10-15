@@ -3,38 +3,36 @@ import { useAuth } from '../../context/AuthContext';
 import { useNotifications } from '../../context/NotificationContext';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
-import { MediaUploader } from '../../components/common/MediaUploader';
-import { CheckCircle2, User, Globe, ExternalLink, Star, Users, BookOpen } from 'lucide-react';
-
-const AVATAR_PRESETS = [
-  'https://images.unsplash.com/photo-1567532939604-b6b5b0db2604?w=150',
-  'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150',
-  'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150',
-  'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150',
-  'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150'
-];
+import { Avatar } from '../../components/ui/Avatar';
+import { CheckCircle2, Globe, ExternalLink, Star, Users, BookOpen } from 'lucide-react';
+import { useCourses } from '../../context/CourseContext';
+import { userTeachesCourse } from '../../utils/courseFaculty';
 
 export const InstructorProfileEditorPage: React.FC = () => {
   const { currentUser, updateProfile } = useAuth();
+  const { courses } = useCourses();
   const { showToast } = useNotifications();
 
   const [activeTab, setActiveTab] = useState<'profile' | 'social'>('profile');
 
   // Bio & Identity
-  const [name, setName] = useState(currentUser?.name || 'Neha Deshmukh');
-  const [email, setEmail] = useState(currentUser?.email || 'instructor@prajnadhara.edu');
-  const [title, setTitle] = useState(currentUser?.title || 'Lead Distributed Systems Architect & Ex-Googler');
-  const [bio, setBio] = useState(
-    currentUser?.bio ||
-    'Senior distributed systems engineer with 12+ years designing mission-critical high-throughput microservices. Passionate about practical, zero-fluff software architecture.'
-  );
-  const [avatar, setAvatar] = useState(currentUser?.avatar || AVATAR_PRESETS[0]);
+  const [name, setName] = useState(currentUser?.name || '');
+  const [email, setEmail] = useState(currentUser?.email || '');
+  const [title, setTitle] = useState(currentUser?.title || '');
+  const [bio, setBio] = useState(currentUser?.bio || '');
+
+  const myCourses = courses.filter((c) => currentUser?.role === 'admin' || userTeachesCourse(c, currentUser?.id));
+  const learnerCount = myCourses.reduce((sum, c) => sum + Number(c.studentCount || 0), 0);
+  const rated = myCourses.filter((c) => Number(c.reviewsCount) > 0);
+  const averageRating = rated.length
+    ? rated.reduce((sum, c) => sum + Number(c.rating || 0), 0) / rated.length
+    : 0;
 
   // Social
-  const [linkedin, setLinkedin] = useState('https://linkedin.com/in/nehadeshmukh-systems');
-  const [github, setGithub] = useState('https://github.com/neha-cloud');
-  const [website, setWebsite] = useState('https://nehadeshmukh.dev');
-  const [twitter, setTwitter] = useState('@neha_systems');
+  const [linkedin, setLinkedin] = useState('');
+  const [github, setGithub] = useState('');
+  const [website, setWebsite] = useState('');
+  const [twitter, setTwitter] = useState('');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -43,7 +41,7 @@ export const InstructorProfileEditorPage: React.FC = () => {
       email,
       title,
       bio,
-      avatar
+      avatar: ''
     });
     showToast('Instructor profile updated successfully!', 'success');
   };
@@ -55,7 +53,7 @@ export const InstructorProfileEditorPage: React.FC = () => {
           Public Instructor Profile & Studio Identity
         </h1>
         <p className="text-xs text-slate-500 mt-1">
-          Manage your faculty credentials, social links, payout accounts, and preview your storefront presence
+          Manage your name, credentials, and public profile
         </p>
       </div>
 
@@ -91,16 +89,6 @@ export const InstructorProfileEditorPage: React.FC = () => {
           <form onSubmit={handleSubmit} className="space-y-5 text-xs">
             {activeTab === 'profile' && (
               <div className="p-6 border border-slate-200 rounded bg-white space-y-4">
-                {/* Avatar selection via MediaUploader */}
-                <div>
-                  <MediaUploader
-                    label="Profile Photo / Avatar"
-                    value={avatar}
-                    onChange={(url) => setAvatar(url)}
-                    helperText="Upload your official instructor portrait or pick an asset"
-                  />
-                </div>
-
                 <Input
                   label="Display Name"
                   value={name}
@@ -179,11 +167,7 @@ export const InstructorProfileEditorPage: React.FC = () => {
 
           <div className="p-6 border border-slate-200 rounded bg-white shadow-sm space-y-4 text-xs">
             <div className="flex items-start gap-4">
-              <img
-                src={avatar}
-                alt={name}
-                className="w-16 h-16 rounded object-cover border border-slate-200 shrink-0"
-              />
+              <Avatar name={name} size="xl" className="!w-16 !h-16" />
               <div>
                 <h3 className="font-bold text-base text-slate-950 font-display leading-tight">{name}</h3>
                 <p className="text-emerald-800 font-semibold text-xs mt-0.5">{title}</p>
@@ -195,15 +179,15 @@ export const InstructorProfileEditorPage: React.FC = () => {
 
             <div className="grid grid-cols-3 gap-2 py-2 border-y border-slate-100 text-center">
               <div>
-                <div className="font-bold text-slate-900 text-sm tabular-nums">4.92</div>
+                <div className="font-bold text-slate-900 text-sm tabular-nums">{averageRating ? averageRating.toFixed(2) : '—'}</div>
                 <div className="text-[10px] text-slate-500">Rating</div>
               </div>
               <div>
-                <div className="font-bold text-slate-900 text-sm tabular-nums">14,200+</div>
+                <div className="font-bold text-slate-900 text-sm tabular-nums">{learnerCount.toLocaleString('en-IN')}</div>
                 <div className="text-[10px] text-slate-500">Learners</div>
               </div>
               <div>
-                <div className="font-bold text-slate-900 text-sm tabular-nums">5</div>
+                <div className="font-bold text-slate-900 text-sm tabular-nums">{myCourses.length}</div>
                 <div className="text-[10px] text-slate-500">Courses</div>
               </div>
             </div>

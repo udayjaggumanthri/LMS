@@ -1,30 +1,48 @@
-import React, { useState } from 'react';
-import { useLearning } from '../../context/LearningContext';
+import React, { useEffect, useState } from 'react';
+import { orderService, AdminGatewayPayment } from '../../api/orderService';
 import { Table, Column } from '../../components/ui/Table';
 import { Button } from '../../components/ui/Button';
 import { Badge } from '../../components/ui/Badge';
-import { Modal } from '../../components/ui/Modal';
+import { TaxInvoiceModal } from '../../components/orders/TaxInvoiceSheet';
 import { Order } from '../../types';
-import { DollarSign, FileText, Search, Printer, CheckCircle2, ShoppingBag, CreditCard } from 'lucide-react';
+import { DollarSign, FileText, Search, ShoppingBag, CreditCard } from 'lucide-react';
 
 export const AdminOrdersRefundsPage: React.FC = () => {
-  const { orders } = useLearning();
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [payments, setPayments] = useState<AdminGatewayPayment[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
+  const [appliedQuery, setAppliedQuery] = useState('');
+  const [loading, setLoading] = useState(false);
   const [inspectOrder, setInspectOrder] = useState<Order | null>(null);
+  const [checking, setChecking] = useState(false);
+  const [checkNote, setCheckNote] = useState('');
+  const [paymentNote, setPaymentNote] = useState('');
+  const [reloadKey, setReloadKey] = useState(0);
 
-  const totalGMV = orders.reduce((sum, o) => sum + o.total, 0);
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    orderService.searchAdminPayments(appliedQuery)
+      .then((result) => {
+        if (cancelled) return;
+        setOrders(Array.isArray(result.orders) ? result.orders : []);
+        setPayments(Array.isArray(result.payments) ? result.payments : []);
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setOrders([]);
+          setPayments([]);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => { cancelled = true; };
+  }, [appliedQuery, reloadKey]);
+
+  const totalGMV = orders.reduce((sum, o) => sum + Number(o.total || 0), 0);
   const totalItemsSold = orders.reduce((sum, o) => sum + o.items.length, 0);
-
-  const filteredOrders = orders.filter(o => {
-    if (!searchTerm) return true;
-    const q = searchTerm.toLowerCase();
-    return (
-      o.orderNumber.toLowerCase().includes(q) ||
-      o.userId.toLowerCase().includes(q) ||
-      o.invoiceNumber.toLowerCase().includes(q) ||
-      o.items.some(i => i.courseTitle.toLowerCase().includes(q))
-    );
-  });
+  const filteredOrders = orders;
 
   const orderColumns: Column<Order>[] = [
     {
@@ -39,8 +57,17 @@ export const AdminOrdersRefundsPage: React.FC = () => {
     },
     {
       key: 'userId',
-      header: 'Buyer Account',
-      render: (o) => <span className="font-mono text-slate-700 text-xs">{o.userId}</span>
+      header: 'Buyer',
+      render: (o) => (
+        <div>
+          <span className="font-mono text-slate-700 text-xs">{o.userEmail || o.userId}</span>
+        </div>
+      )
+    },
+    {
+      key: 'gatewayInvoice',
+      header: 'Transaction ID',
+      render: (o) => <span className="font-mono text-xs text-slate-800">{o.gatewayInvoice || o.invoiceNumber}</span>
     },
     {
       key: 'items',
@@ -84,14 +111,66 @@ export const AdminOrdersRefundsPage: React.FC = () => {
         <Button
           variant="outline"
           size="sm"
-          onClick={() => setInspectOrder(o)}
+          disabled={o.status !== 'completed'}
+          onClick={() => { if (o.status === 'completed') setInspectOrder(o); }}
           leftIcon={<FileText className="w-3.5 h-3.5" />}
         >
           Receipt
         </Button>
       )
+    },
+    {
+      key: 'check',
+      header: 'Status',
+      align: 'right',
+      render: (o) => (
+        <Button
+          variant="outline"
+          size="sm"
+          disabled={checking}
+          onClick={() => checkOrder(o)}
+        >
+          {checking ? 'Checking…' : 'Check with Toucan'}
+        </Button>
+      )
     }
   ];
+
+  const checkOrder = async (order: Order) => {
+    setChecking(true);
+    setCheckNote('');
+    setPaymentNote('');
+    try {
+      const result = await orderService.checkAdminPayment({
+        orderId: order.id,
+        invoice: order.gatewayInvoice || undefined,
+      });
+      setCheckNote(result.message || (result.success ? 'Toucan confirmed this payment.' : 'Toucan has not confirmed this payment.'));
+      setReloadKey((key) => key + 1);
+    } catch (err: any) {
+      setCheckNote(err?.response?.data?.error || 'Status check failed.');
+    } finally {
+      setChecking(false);
+    }
+  };
+
+  const checkPayment = async (payment: AdminGatewayPayment) => {
+    setChecking(true);
+    setPaymentNote('');
+    try {
+      const result = await orderService.checkAdminPayment({ invoice: payment.invoice });
+      setPaymentNote(result.message || `${payment.invoice}: ${result.paymentStatus || 'checked'}`);
+      setPayments((rows) => rows.map((row) => (
+        row.invoice === payment.invoice
+          ? { ...row, paymentStatus: result.paymentStatus || row.paymentStatus, actionCode: result.actionCode }
+          : row
+      )));
+    } catch (err: any) {
+      setPaymentNote(err?.response?.data?.error || 'Status check failed.');
+    } finally {
+      setChecking(false);
+    }
+  };
 
   return (
     <div className="text-left space-y-6">
@@ -144,19 +223,28 @@ export const AdminOrdersRefundsPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Search Bar */}
-      <div className="relative max-w-md">
-        <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-        <input
-          type="text"
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          placeholder="Filter by Order ID, Buyer Account, Invoice, Course title..."
-          className="w-full bg-white border border-slate-300 rounded pl-9 pr-4 py-2 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-700"
-        />
-      </div>
+      <form
+        className="flex flex-wrap items-center gap-2 max-w-2xl"
+        onSubmit={(event) => {
+          event.preventDefault();
+          setAppliedQuery(searchTerm.trim());
+        }}
+      >
+        <div className="relative flex-1 min-w-[240px]">
+          <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+          <input
+            type="text"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            placeholder="Transaction ID, order number, invoice, or buyer email"
+            className="w-full bg-white border border-slate-300 rounded pl-9 pr-4 py-2 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-700"
+          />
+        </div>
+        <Button type="submit" variant="primary" size="sm">Search</Button>
+      </form>
+      {loading ? <p className="text-xs text-slate-500">Loading transactions…</p> : null}
+      {checkNote ? <p className="text-xs text-slate-700">{checkNote}</p> : null}
 
-      {/* Orders Table */}
       <Table
         columns={orderColumns}
         data={filteredOrders}
@@ -164,81 +252,48 @@ export const AdminOrdersRefundsPage: React.FC = () => {
         pageSize={12}
       />
 
-      {/* Order Invoice Inspector Modal */}
-      {inspectOrder && (
-        <Modal
-          isOpen={!!inspectOrder}
-          onClose={() => setInspectOrder(null)}
-          title={`Order Tax Receipt: ${inspectOrder.invoiceNumber}`}
-          size="md"
-        >
-          <div className="p-4 border border-slate-200 rounded text-xs space-y-4 bg-white">
-            <div className="flex justify-between items-center pb-3 border-b border-slate-100">
-              <div>
-                <h3 className="font-bold text-slate-900 text-sm">PrajnadharaEdu Official Tax Invoice</h3>
-                <p className="text-[11px] text-slate-500">GSTIN: 37AAECP1234F1Z5 • PAN: AAECP1234F</p>
-              </div>
-              <div className="text-right">
-                <span className="px-2 py-0.5 rounded text-[11px] font-semibold bg-emerald-100 text-emerald-800 border border-emerald-300 inline-flex items-center gap-1">
-                  <CheckCircle2 className="w-3 h-3" /> Fully Settled
-                </span>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4 border-b border-slate-100 pb-3">
-              <div>
-                <span className="text-slate-500 block text-[11px]">Invoice ID:</span>
-                <span className="font-mono font-bold text-slate-900">{inspectOrder.invoiceNumber}</span>
-                <span className="text-slate-500 block text-[11px] mt-1">Order Ref:</span>
-                <span className="font-mono text-slate-700">{inspectOrder.orderNumber}</span>
-                <span className="text-slate-500 block text-[11px] mt-1">Learner ID:</span>
-                <span className="font-mono text-slate-700">{inspectOrder.userId}</span>
-              </div>
-              <div className="text-right">
-                <span className="text-slate-500 block text-[11px]">Order Date:</span>
-                <span className="text-slate-800 font-medium">{inspectOrder.createdAt}</span>
-                <span className="text-slate-500 block text-[11px] mt-1">Payment Method:</span>
-                <span className="uppercase text-slate-800 font-semibold">{inspectOrder.paymentMethod}</span>
-              </div>
-            </div>
-
-            <div>
-              <h4 className="font-semibold text-slate-800 mb-2">Itemized Courses</h4>
-              <div className="border border-slate-100 rounded overflow-hidden">
-                <table className="w-full text-left">
-                  <thead className="bg-slate-50 text-[11px] text-slate-500">
-                    <tr>
-                      <th className="p-2 font-medium">Item Description</th>
-                      <th className="p-2 text-right font-medium">Fee (INR)</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100">
-                    {inspectOrder.items.map((it, idx) => (
-                      <tr key={idx}>
-                        <td className="p-2 font-medium text-slate-800">{it.courseTitle}</td>
-                        <td className="p-2 text-right font-mono text-slate-700">₹{it.price.toLocaleString('en-IN')}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-
-            <div className="pt-2 border-t border-slate-100 flex justify-between font-bold text-slate-900 text-sm">
-              <span>Total Settlement:</span>
-              <span className="tabular-nums font-mono">₹{inspectOrder.total.toLocaleString('en-IN')}</span>
-            </div>
+      {payments.length > 0 ? (
+        <div className="space-y-2">
+          <h2 className="text-sm font-semibold text-slate-900">Other application payments</h2>
+          <p className="text-xs text-slate-500">These payments were not course orders. The transaction id still checks with Toucan.</p>
+          {paymentNote ? <p className="text-xs text-slate-700">{paymentNote}</p> : null}
+          <div className="border border-slate-200 rounded overflow-hidden">
+            <table className="w-full text-left text-xs">
+              <thead className="bg-slate-50 text-slate-500">
+                <tr>
+                  <th className="p-2 font-medium">Transaction ID</th>
+                  <th className="p-2 font-medium">Application</th>
+                  <th className="p-2 font-medium">Buyer</th>
+                  <th className="p-2 font-medium">Amount</th>
+                  <th className="p-2 font-medium">Status</th>
+                  <th className="p-2 font-medium" />
+                </tr>
+              </thead>
+              <tbody>
+                {payments.map((payment) => (
+                  <tr key={payment.invoice} className="border-t border-slate-100">
+                    <td className="p-2 font-mono">{payment.invoice}</td>
+                    <td className="p-2">{payment.applicationId}</td>
+                    <td className="p-2">{payment.customerEmail || payment.applicationOrderId}</td>
+                    <td className="p-2">₹{payment.amount}</td>
+                    <td className="p-2">{payment.paymentStatus}</td>
+                    <td className="p-2 text-right">
+                      <Button variant="outline" size="sm" disabled={checking} onClick={() => checkPayment(payment)}>
+                        Check with Toucan
+                      </Button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
-          <div className="mt-4 flex justify-end gap-2">
-            <Button variant="outline" size="sm" onClick={() => setInspectOrder(null)}>
-              Close
-            </Button>
-            <Button variant="primary" size="sm" onClick={() => window.print()} leftIcon={<Printer className="w-3.5 h-3.5" />}>
-              Print Receipt
-            </Button>
-          </div>
-        </Modal>
-      )}
+        </div>
+      ) : null}
+
+      <TaxInvoiceModal
+        orderId={inspectOrder?.status === 'completed' ? inspectOrder.id : null}
+        onClose={() => setInspectOrder(null)}
+      />
     </div>
   );
 };

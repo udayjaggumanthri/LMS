@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { adminService } from '../api/adminService';
-import { apiClient } from '../api/client';
+import { apiClient, resolveMediaUrl } from '../api/client';
 
 export interface BrandingData {
   platformName: string;
@@ -45,7 +45,7 @@ export const BrandingProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         link.rel = 'shortcut icon';
         document.getElementsByTagName('head')[0].appendChild(link);
       }
-      link.href = data.faviconUrl;
+      link.href = resolveMediaUrl(data.faviconUrl);
     }
   };
 
@@ -58,8 +58,8 @@ export const BrandingProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         const updated: BrandingData = {
           platformName: data.platformName || defaultBranding.platformName,
           siteTitle: data.siteTitle || defaultBranding.siteTitle,
-          logoUrl: data.logoUrl || '',
-          faviconUrl: data.faviconUrl || ''
+          logoUrl: resolveMediaUrl(data.logoUrl),
+          faviconUrl: resolveMediaUrl(data.faviconUrl)
         };
         setBranding(updated);
         applyBrandingToDOM(updated);

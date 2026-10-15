@@ -4,7 +4,6 @@ import {
   ShoppingCart,
   Heart,
   ChevronDown,
-  User as UserIcon,
   BookOpen,
   LogOut,
   LayoutDashboard,
@@ -18,13 +17,13 @@ import {
   ShieldCheck,
   FileText,
   Home,
-  GraduationCap,
   Info,
   Mail,
   Compass,
   ArrowRight
 } from 'lucide-react';
 import { Logo } from '../common/Logo';
+import { Avatar } from '../ui/Avatar';
 import { Button } from '../ui/Button';
 import { useAuth } from '../../context/AuthContext';
 import { useCart } from '../../context/CartContext';
@@ -40,7 +39,6 @@ export const PublicLayout: React.FC = () => {
 
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [currency, setCurrency] = useState<'INR' | 'USD'>('INR');
   const [newsletterEmail, setNewsletterEmail] = useState('');
   const [newsletterSubscribed, setNewsletterSubscribed] = useState(false);
 
@@ -69,9 +67,9 @@ export const PublicLayout: React.FC = () => {
   };
 
   const getWorkspaceLabel = () => {
-    if (currentRole === 'admin') return 'Admin Portal';
-    if (currentRole === 'instructor') return 'Instructor Studio';
-    return 'My Learning';
+    if (currentRole === 'admin') return 'Admin';
+    if (currentRole === 'instructor') return 'Studio';
+    return 'My learning';
   };
 
   const handleNewsletterSubmit = (e: React.FormEvent) => {
@@ -121,19 +119,6 @@ export const PublicLayout: React.FC = () => {
               <span className="text-[10px] font-bold px-1.5 py-0.2 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200">
                 All
               </span>
-            </NavLink>
-
-            <NavLink
-              to="/teach"
-              className={({ isActive }) =>
-                `px-3 py-1.5 text-xs font-semibold rounded-lg transition-all ${
-                  isActive
-                    ? 'text-emerald-950 bg-emerald-50/90 font-bold border border-emerald-200/70 shadow-2xs'
-                    : 'text-slate-700 hover:text-slate-950 hover:bg-slate-100/70'
-                }`
-              }
-            >
-              Teach with Us
             </NavLink>
 
             <NavLink
@@ -211,16 +196,6 @@ export const PublicLayout: React.FC = () => {
             {/* Authenticated State vs Guest Buttons */}
             {isAuthenticated && currentUser ? (
               <div className="flex items-center gap-2">
-                {/* Direct Workspace Pill Button */}
-                <Link
-                  to={getWorkspacePath()}
-                  className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-emerald-950 bg-emerald-50 hover:bg-emerald-100/90 border border-emerald-200/90 rounded-lg transition-colors shadow-2xs"
-                  title="Open Your Workspace"
-                >
-                  <LayoutDashboard className="w-3.5 h-3.5 text-emerald-700" />
-                  <span>{getWorkspaceLabel()}</span>
-                </Link>
-
                 {/* User Avatar Menu */}
                 <div className="relative">
                   <button
@@ -229,11 +204,7 @@ export const PublicLayout: React.FC = () => {
                     className="flex items-center gap-1.5 p-1 rounded-lg hover:bg-slate-100/80 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700 min-h-[40px]"
                     aria-label="User menu"
                   >
-                    <img
-                      src={currentUser.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100'}
-                      alt={currentUser.name}
-                      className="w-7 h-7 sm:w-8 sm:h-8 rounded-full object-cover border border-slate-200 shadow-2xs"
-                    />
+                    <Avatar name={currentUser.name} size="sm" />
                     <ChevronDown className="w-3.5 h-3.5 text-slate-400 hidden sm:block" />
                   </button>
 
@@ -257,19 +228,11 @@ export const PublicLayout: React.FC = () => {
                           className="flex items-center gap-2.5 px-4 py-2 hover:bg-emerald-50/60 text-emerald-950 font-semibold"
                         >
                           <LayoutDashboard className="w-3.5 h-3.5 text-emerald-700" />
-                          <span>Enter {getWorkspaceLabel()}</span>
+                          <span>{getWorkspaceLabel()}</span>
                         </Link>
 
                         {currentRole === 'student' && (
                           <>
-                            <Link
-                              to="/student/my-learning"
-                              onClick={() => setUserMenuOpen(false)}
-                              className="flex items-center gap-2.5 px-4 py-2 hover:bg-slate-50 text-slate-700"
-                            >
-                              <BookOpen className="w-3.5 h-3.5 text-slate-400" />
-                              <span>My Learning</span>
-                            </Link>
                             <Link
                               to="/student/certificates"
                               onClick={() => setUserMenuOpen(false)}
@@ -381,11 +344,7 @@ export const PublicLayout: React.FC = () => {
             {isAuthenticated && currentUser ? (
               <div className="space-y-3">
                 <div className="flex items-center gap-3">
-                  <img
-                    src={currentUser.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100'}
-                    alt={currentUser.name}
-                    className="w-10 h-10 rounded-full object-cover border border-slate-200 shadow-2xs"
-                  />
+                  <Avatar name={currentUser.name} size="md" />
                   <div className="min-w-0 flex-1">
                     <div className="text-xs font-bold text-slate-900 truncate">{currentUser.name}</div>
                     <div className="text-[11px] text-slate-500 truncate">{currentUser.email}</div>
@@ -457,22 +416,6 @@ export const PublicLayout: React.FC = () => {
               <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
                 All
               </span>
-            </NavLink>
-
-            <NavLink
-              to="/teach"
-              onClick={() => setMobileMenuOpen(false)}
-              className={({ isActive }) =>
-                `flex items-center justify-between px-3 py-2.5 rounded-lg text-xs font-semibold transition-colors ${
-                  isActive ? 'bg-emerald-50 text-emerald-900 font-bold border border-emerald-200/60' : 'text-slate-700 hover:bg-slate-50'
-                }`
-              }
-            >
-              <div className="flex items-center gap-3">
-                <GraduationCap className="w-4 h-4 text-emerald-700" />
-                <span>Teach with Us</span>
-              </div>
-              <ChevronRight className="w-4 h-4 text-slate-400" />
             </NavLink>
 
             <NavLink
@@ -616,12 +559,6 @@ export const PublicLayout: React.FC = () => {
               <p className="mt-4 text-xs text-slate-400 leading-relaxed">
                 At PrajnadharaEdu offers smart, career-aligned online learning designed to help you rise. Gain the skills you need and the confidence you deserve.
               </p>
-              <div className="mt-4 flex items-center gap-2 text-xs text-slate-400">
-                <span className="font-semibold text-slate-300">Currency:</span>
-                <span className="px-2 py-0.5 rounded text-[11px] font-medium bg-emerald-900 text-emerald-200 border border-emerald-700">
-                  ₹ INR
-                </span>
-              </div>
             </div>
 
             {/* Col 2: GET HELP */}
@@ -631,6 +568,7 @@ export const PublicLayout: React.FC = () => {
               </h4>
               <ul className="space-y-2 text-xs text-slate-400">
                 <li><Link to="/contact" className="hover:text-white transition-colors">Contact Us</Link></li>
+                <li><Link to="/teach" className="hover:text-white transition-colors">Teach with Us</Link></li>
                 <li><Link to="/blog" className="hover:text-white transition-colors">Blog &amp; Articles</Link></li>
                 <li><Link to="/privacy" className="hover:text-white transition-colors">Privacy Policy</Link></li>
                 <li><Link to="/refund-policy" className="hover:text-white transition-colors">Refund Policy</Link></li>
@@ -644,10 +582,14 @@ export const PublicLayout: React.FC = () => {
                 PROGRAMS
               </h4>
               <ul className="space-y-2 text-xs text-slate-400">
-                <li><Link to="/category/development" className="hover:text-white transition-colors">Web Development</Link></li>
-                <li><Link to="/courses?q=programming" className="hover:text-white transition-colors">Programming Languages</Link></li>
-                <li><Link to="/category/mobile-app-development" className="hover:text-white transition-colors">Mobile App Development</Link></li>
-                <li><Link to="/category/data-science" className="hover:text-white transition-colors">Data Science</Link></li>
+                {categories.filter((cat) => cat.isTop).map((cat) => (
+                  <li key={cat.id}>
+                    <Link to={`/category/${cat.slug}`} className="hover:text-white transition-colors">{cat.name}</Link>
+                  </li>
+                ))}
+                {categories.filter((cat) => cat.isTop).length === 0 && (
+                  <li><Link to="/courses" className="hover:text-white transition-colors">Course catalog</Link></li>
+                )}
               </ul>
             </div>
 
@@ -670,10 +612,8 @@ export const PublicLayout: React.FC = () => {
           </div>
 
           {/* Copyright Row */}
-          <div className="mt-8 pt-6 border-t border-slate-900 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-500 gap-2">
-            <div>
-              © 2026 All Rights Reserved By Prajnadhara Infotech Pvt Ltd
-            </div>
+          <div className="mt-8 pt-6 border-t border-slate-800 text-center text-xs text-slate-500">
+            © 2026 All Rights Reserved By Prajnadhara Infotech Pvt Ltd
           </div>
         </div>
       </footer>

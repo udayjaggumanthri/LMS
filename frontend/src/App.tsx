@@ -32,7 +32,7 @@ import { WishlistPage } from './pages/public/WishlistPage';
 import { SignInPage } from './pages/public/SignInPage';
 import { SignUpPage } from './pages/public/SignUpPage';
 import { ForgotPasswordPage } from './pages/public/ForgotPasswordPage';
-import { BrandGuidePage } from './pages/public/BrandGuidePage';
+import { ResetPasswordPage } from './pages/public/ResetPasswordPage';
 import { TermsPage } from './pages/public/TermsPage';
 import { PrivacyPage } from './pages/public/PrivacyPage';
 import { RefundPolicyPage } from './pages/public/RefundPolicyPage';
@@ -53,11 +53,11 @@ import { StudentAccountPage } from './pages/student/StudentAccountPage';
 import { InstructorDashboardPage } from './pages/instructor/InstructorDashboardPage';
 import { InstructorCoursesPage } from './pages/instructor/InstructorCoursesPage';
 import { CreateCoursePage } from './pages/instructor/CreateCoursePage';
+import { LessonEditorPage } from './pages/instructor/LessonEditorPage';
 import { InstructorQAInboxPage } from './pages/instructor/InstructorQAInboxPage';
 import { InstructorReviewsPage } from './pages/instructor/InstructorReviewsPage';
 import { InstructorStudentsPage } from './pages/instructor/InstructorStudentsPage';
 import { InstructorAnalyticsPage } from './pages/instructor/InstructorAnalyticsPage';
-import { InstructorPayoutsPage } from './pages/instructor/InstructorPayoutsPage';
 import { InstructorProfileEditorPage } from './pages/instructor/InstructorProfileEditorPage';
 
 // Admin Pages
@@ -68,7 +68,6 @@ import { AdminCourseReviewQueuePage } from './pages/admin/AdminCourseReviewQueue
 import { AdminCourseManagementPage } from './pages/admin/AdminCourseManagementPage';
 import { AdminCategoriesPage } from './pages/admin/AdminCategoriesPage';
 import { AdminOrdersRefundsPage } from './pages/admin/AdminOrdersRefundsPage';
-import { AdminPayoutsPage } from './pages/admin/AdminPayoutsPage';
 import { AdminCouponsPage } from './pages/admin/AdminCouponsPage';
 import { AdminReportsPage } from './pages/admin/AdminReportsPage';
 import { AdminSettingsPage } from './pages/admin/AdminSettingsPage';
@@ -76,6 +75,8 @@ import { AdminVisualPageEditorPage } from './pages/admin/AdminVisualPageEditorPa
 import { AdminBlogManagementPage } from './pages/admin/AdminBlogManagementPage';
 import { AdminMediaLibraryPage } from './pages/admin/AdminMediaLibraryPage';
 import { AdminSMTPSettingsPage } from './pages/admin/AdminSMTPSettingsPage';
+import { AdminMailTemplatesPage } from './pages/admin/AdminMailTemplatesPage';
+import { AdminMailTemplateEditPage } from './pages/admin/AdminMailTemplateEditPage';
 import { AdminPaymentGatewayPage } from './pages/admin/AdminPaymentGatewayPage';
 
 export default function App() {
@@ -110,7 +111,7 @@ export default function App() {
                         <Route path="/signin" element={<SignInPage />} />
                         <Route path="/signup" element={<SignUpPage />} />
                         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-                        <Route path="/brand" element={<BrandGuidePage />} />
+                        <Route path="/reset-password" element={<ResetPasswordPage />} />
                         <Route path="/terms" element={<TermsPage />} />
                         <Route path="/privacy" element={<PrivacyPage />} />
                         <Route path="/refund-policy" element={<RefundPolicyPage />} />
@@ -139,12 +140,13 @@ export default function App() {
                         <Route path="/instructor/dashboard" element={<InstructorDashboardPage />} />
                         <Route path="/instructor/courses" element={<InstructorCoursesPage />} />
                         <Route path="/instructor/courses/new" element={<CreateCoursePage />} />
+                        <Route path="/instructor/courses/:courseId/sections/:sectionId/lessons/new" element={<LessonEditorPage />} />
+                        <Route path="/instructor/courses/:courseId/sections/:sectionId/lessons/:lectureId" element={<LessonEditorPage />} />
                         <Route path="/instructor/courses/:id/edit" element={<CreateCoursePage />} />
                         <Route path="/instructor/qa" element={<InstructorQAInboxPage />} />
                         <Route path="/instructor/reviews" element={<InstructorReviewsPage />} />
                         <Route path="/instructor/students" element={<InstructorStudentsPage />} />
                         <Route path="/instructor/analytics" element={<InstructorAnalyticsPage />} />
-                        <Route path="/instructor/payouts" element={<InstructorPayoutsPage />} />
                         <Route path="/instructor/profile" element={<InstructorProfileEditorPage />} />
 
                         {/* Admin Center */}
@@ -153,14 +155,17 @@ export default function App() {
                         <Route path="/admin/blogs" element={<AdminBlogManagementPage />} />
                         <Route path="/admin/media-library" element={<AdminMediaLibraryPage />} />
                         <Route path="/admin/smtp" element={<AdminSMTPSettingsPage />} />
+                        <Route path="/admin/mail-templates" element={<AdminMailTemplatesPage />} />
+                        <Route path="/admin/mail-templates/:key" element={<AdminMailTemplateEditPage />} />
                         <Route path="/admin/course-reviews" element={<AdminCourseReviewQueuePage />} />
                         <Route path="/admin/courses" element={<AdminCourseManagementPage />} />
                         <Route path="/admin/courses/new" element={<CreateCoursePage />} />
+                        <Route path="/admin/courses/:courseId/sections/:sectionId/lessons/new" element={<LessonEditorPage />} />
+                        <Route path="/admin/courses/:courseId/sections/:sectionId/lessons/:lectureId" element={<LessonEditorPage />} />
                         <Route path="/admin/courses/:id/edit" element={<CreateCoursePage />} />
                         <Route path="/admin/users" element={<AdminUsersPage />} />
                         <Route path="/admin/instructor-applications" element={<AdminInstructorApplicationsPage />} />
                         <Route path="/admin/orders-refunds" element={<AdminOrdersRefundsPage />} />
-                        <Route path="/admin/payouts" element={<AdminPayoutsPage />} />
                         <Route path="/admin/coupons" element={<AdminCouponsPage />} />
                         <Route path="/admin/categories" element={<AdminCategoriesPage />} />
                         <Route path="/admin/payment-gateway" element={<AdminPaymentGatewayPage />} />

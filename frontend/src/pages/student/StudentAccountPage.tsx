@@ -1,8 +1,11 @@
 import React, { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
+import { apiErrorMessage } from '../../api/client';
 import { useNotifications } from '../../context/NotificationContext';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
+import { PasswordInput } from '../../components/ui/PasswordInput';
+import { Avatar } from '../../components/ui/Avatar';
 import {
   User as UserIcon,
   Shield,
@@ -18,17 +21,6 @@ import {
   ExternalLink
 } from 'lucide-react';
 
-const AVATAR_OPTIONS = [
-  'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80',
-  'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&auto=format&fit=crop&q=80',
-  'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200&auto=format&fit=crop&q=80',
-  'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=200&auto=format&fit=crop&q=80',
-  'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=200&auto=format&fit=crop&q=80',
-  'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=200&auto=format&fit=crop&q=80',
-  'https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?w=200&auto=format&fit=crop&q=80',
-  'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=200&auto=format&fit=crop&q=80'
-];
-
 type SettingsTab = 'profile' | 'learning' | 'security' | 'notifications';
 
 export const StudentAccountPage: React.FC = () => {
@@ -42,7 +34,6 @@ export const StudentAccountPage: React.FC = () => {
   const [email, setEmail] = useState(currentUser?.email || '');
   const [title, setTitle] = useState(currentUser?.title || '');
   const [bio, setBio] = useState(currentUser?.bio || '');
-  const [avatar, setAvatar] = useState(currentUser?.avatar || AVATAR_OPTIONS[0]);
   const [githubHandle, setGithubHandle] = useState('prajna-learner');
   const [linkedinUrl, setLinkedinUrl] = useState('https://linkedin.com/in/');
 
@@ -64,17 +55,21 @@ export const StudentAccountPage: React.FC = () => {
   const [emailWeeklyDigest, setEmailWeeklyDigest] = useState(true);
   const [emailDiscounts, setEmailDiscounts] = useState(false);
 
-  const handleProfileSubmit = (e: React.FormEvent) => {
+  const handleProfileSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) {
       showToast('error', 'Full name cannot be blank.');
       return;
     }
-    updateProfile({ name, email, title, bio, avatar });
-    showToast('success', 'Student profile details successfully updated!');
+    try {
+      await updateProfile({ name, email, title, bio, avatar: '' });
+      showToast('success', 'Student profile details successfully updated!');
+    } catch (err) {
+      showToast('error', apiErrorMessage(err, 'Could not save your profile.'));
+    }
   };
 
-  const handlePasswordSubmit = (e: React.FormEvent) => {
+  const handlePasswordSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!currentPassword) {
       showToast('error', 'Please enter your current password.');
@@ -88,10 +83,15 @@ export const StudentAccountPage: React.FC = () => {
       showToast('error', 'New password and confirmation do not match.');
       return;
     }
-    setCurrentPassword('');
-    setNewPassword('');
-    setNewPasswordConfirm('');
-    showToast('success', 'Account security credentials updated successfully.');
+    try {
+      await updateProfile({ password: newPassword, currentPassword } as any);
+      setCurrentPassword('');
+      setNewPassword('');
+      setNewPasswordConfirm('');
+      showToast('success', 'Password updated.');
+    } catch (err) {
+      showToast('error', apiErrorMessage(err, 'Could not update the password.'));
+    }
   };
 
   const handlePreferencesSave = (e: React.FormEvent) => {
@@ -120,11 +120,7 @@ export const StudentAccountPage: React.FC = () => {
       <div className="p-5 border border-slate-200 rounded-lg bg-white flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-xs">
         <div className="flex items-center gap-4">
           <div className="relative">
-            <img
-              src={avatar}
-              alt={name}
-              className="w-16 h-16 rounded-full object-cover border-2 border-emerald-800 shadow-xs"
-            />
+            <Avatar name={name} size="xl" className="!w-16 !h-16 border-2 border-emerald-800" />
             <span className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-emerald-700 border-2 border-white rounded-full" />
           </div>
           <div>
@@ -209,34 +205,6 @@ export const StudentAccountPage: React.FC = () => {
         {/* Tab 1: Profile Information */}
         {activeTab === 'profile' && (
           <form onSubmit={handleProfileSubmit} className="space-y-6">
-            <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-2">
-                Select Profile Avatar
-              </label>
-              <div className="flex flex-wrap gap-2.5">
-                {AVATAR_OPTIONS.map((item, idx) => (
-                  <button
-                    key={idx}
-                    type="button"
-                    onClick={() => setAvatar(item)}
-                    className={`relative rounded-full p-0.5 transition-transform hover:scale-105 ${
-                      avatar === item ? 'ring-2 ring-emerald-800 ring-offset-2' : 'opacity-70 hover:opacity-100'
-                    }`}
-                  >
-                    <img
-                      src={item}
-                      alt={`Avatar option ${idx + 1}`}
-                      className="w-12 h-12 rounded-full object-cover border border-slate-200"
-                    />
-                    {avatar === item && (
-                      <span className="absolute bottom-0 right-0 bg-emerald-800 text-white rounded-full p-0.5 shadow">
-                        <Check className="w-2.5 h-2.5" />
-                      </span>
-                    )}
-                  </button>
-                ))}
-              </div>
-            </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <Input
@@ -403,25 +371,22 @@ export const StudentAccountPage: React.FC = () => {
                 <span>Change Account Password</span>
               </h3>
 
-              <Input
+              <PasswordInput
                 label="Current Password"
-                type="password"
                 value={currentPassword}
                 onChange={(e) => setCurrentPassword(e.target.value)}
-                placeholder="&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;"
+                placeholder="Current password"
               />
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <Input
+                <PasswordInput
                   label="New Password"
-                  type="password"
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
                   placeholder="Minimum 8 characters"
                 />
-                <Input
+                <PasswordInput
                   label="Confirm New Password"
-                  type="password"
                   value={confirmPassword}
                   onChange={(e) => setNewPasswordConfirm(e.target.value)}
                   placeholder="Repeat new password"

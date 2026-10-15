@@ -1,15 +1,37 @@
-import { apiClient } from './client';
+import { API_BASE_URL, apiClient } from './client';
 import { Course, Category, Review, QAQuestion } from '../types';
+
+async function fetchPages(path: string, params?: Record<string, unknown>): Promise<any[]> {
+  const collected: any[] = [];
+  let next: string | null = path;
+  let first = true;
+  while (next) {
+    const res: { data: any } = await apiClient.get(next, first ? { params: { page_size: 200, ...(params || {}) } } : undefined);
+    const data: any = res.data;
+    const page = Array.isArray(data) ? data : data.results;
+    if (Array.isArray(page)) collected.push(...page);
+    next = data && data.next ? data.next : null;
+    first = false;
+  }
+  return collected;
+}
 
 export const courseService = {
   async getCategories(): Promise<Category[]> {
-    const res = await apiClient.get('/categories/');
-    return res.data.results || res.data;
+    return fetchPages('/categories/');
   },
 
   async getCourses(params?: { category?: string; level?: string; price?: string; search?: string }): Promise<Course[]> {
-    const res = await apiClient.get('/courses/', { params });
-    return res.data.results || res.data;
+    return fetchPages('/courses/', params);
+  },
+
+  async getManagedCourses(): Promise<Course[]> {
+    return fetchPages('/instructor/courses/');
+  },
+
+  async getManagedCourse(courseId: string | number): Promise<Course> {
+    const res = await apiClient.get(`/instructor/courses/${courseId}/`);
+    return res.data;
   },
 
   async getCourseBySlug(slug: string): Promise<Course> {
@@ -34,6 +56,35 @@ export const courseService = {
 
   async deleteCourse(courseId: string | number): Promise<any> {
     const res = await apiClient.delete(`/instructor/courses/${courseId}/`);
+    return res.data;
+  },
+
+  async exportCourses(): Promise<void> {
+    const token = localStorage.getItem('prajnadhara_token');
+    const res = await fetch(`${API_BASE_URL}/admin/courses/export/`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    });
+    if (!res.ok) {
+      throw new Error('Could not export the courses.');
+    }
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'prajnadhara-courses.json';
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+  },
+
+  async importCourses(file: File): Promise<{ created: number; updated: number; categoriesCreated: number; errors: { course: string; error: string }[] }> {
+    const form = new FormData();
+    form.append('file', file);
+    const res = await apiClient.post('/admin/courses/import/', form, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+      timeout: 120000,
+    });
     return res.data;
   },
 
@@ -65,6 +116,20 @@ export const courseService = {
   async replyReview(reviewId: string | number, comment: string): Promise<Review> {
     const res = await apiClient.post(`/instructor/reviews/${reviewId}/reply/`, { comment });
     return res.data;
+  },
+
+  async getAnnouncements(courseId: string | number): Promise<{ id: number; title: string; body: string; authorName: string; createdAt: string }[]> {
+    const res = await apiClient.get(`/courses/${courseId}/announcements/`);
+    return res.data;
+  },
+
+  async addAnnouncement(courseId: string | number, data: { title: string; body: string }) {
+    const res = await apiClient.post(`/courses/${courseId}/announcements/`, data);
+    return res.data;
+  },
+
+  async deleteAnnouncement(courseId: string | number, announcementId: string | number) {
+    await apiClient.delete(`/courses/${courseId}/announcements/${announcementId}/`);
   },
 
   async getQA(courseId: string | number): Promise<QAQuestion[]> {

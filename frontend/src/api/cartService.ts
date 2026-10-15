@@ -13,7 +13,7 @@ export const cartService = {
   },
 
   async removeFromCart(courseId: string | number) {
-    const res = await apiClient.delete('/cart/', { data: { courseId } });
+    const res = await apiClient.delete('/cart/', { params: { courseId }, data: { courseId } });
     return res.data;
   },
 
