@@ -256,7 +256,7 @@ class PaymentGatewayTestView(APIView):
             'murl': murl,
             'name': 'Prajnadhara Admin Test',
             'phone': phone,
-            'emaiId': request.user.email,
+            'emailId': request.user.email,
             'ha': ha
         }
 

@@ -153,7 +153,7 @@ def start_checkout(profile, application, invoice, amount, customer):
         'furl': return_url(failure_base, status='cancelled', **return_params),
         'name': name,
         'phone': phone,
-        'emaiId': email,
+        'emailId': email,
         'ha': compute_hash_amount(ta_str),
     }
     opener = _opener()

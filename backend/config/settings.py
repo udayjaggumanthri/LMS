@@ -17,13 +17,25 @@ sys.path.insert(0, str(BASE_DIR))
 SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-prajnadhara-edu-enterprise-secret-key-2026')
 DEBUG = os.getenv('DEBUG', 'True') == 'True'
 
-ALLOWED_HOSTS = [host.strip() for host in os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1,0.0.0.0').split(',')]
-if 'uat.prajnadharaedu.com' not in ALLOWED_HOSTS:
-    ALLOWED_HOSTS.append('uat.prajnadharaedu.com')
+ALLOWED_HOSTS = [host.strip() for host in os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1,0.0.0.0').split(',') if host.strip()]
+for host in (
+    'prajnadharaedu.com',
+    'www.prajnadharaedu.com',
+    'uat.prajnadharaedu.com',
+    '103.127.146.47',
+):
+    if host not in ALLOWED_HOSTS:
+        ALLOWED_HOSTS.append(host)
 
 CSRF_TRUSTED_ORIGINS = [
+    'https://prajnadharaedu.com',
+    'https://www.prajnadharaedu.com',
     'https://uat.prajnadharaedu.com',
+    'http://prajnadharaedu.com',
+    'http://www.prajnadharaedu.com',
     'http://uat.prajnadharaedu.com',
+    'http://103.127.146.47',
+    'http://103.127.146.47:3011',
 ]
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 USE_X_FORWARDED_HOST = True
@@ -186,9 +198,18 @@ SIMPLE_JWT = {
     'USER_ID_CLAIM': 'user_id',
 }
 
-# CORS Configuration
-CORS_ALLOW_ALL_ORIGINS = True
+# CORS Configuration. Same-origin /api on prajnadharaedu.com does not need CORS.
+# These origins are allowed when the browser calls the API from another host.
+CORS_ALLOW_ALL_ORIGINS = False
 CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOWED_ORIGINS = [
+    origin.strip()
+    for origin in os.getenv(
+        'CORS_ALLOWED_ORIGINS',
+        'https://prajnadharaedu.com,https://www.prajnadharaedu.com,https://uat.prajnadharaedu.com,http://localhost:3000,http://127.0.0.1:3011',
+    ).split(',')
+    if origin.strip()
+]
 
 # Pluggable Payment Gateways
 PAYMENT_GATEWAY_DEFAULT = os.getenv('PAYMENT_GATEWAY_DEFAULT', 'mock')

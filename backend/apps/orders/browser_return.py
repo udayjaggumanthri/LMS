@@ -28,10 +28,31 @@ def browser_return_location(data):
     return _location_for(txn)
 
 
+def _shopper_page(url: str, *, paid: bool) -> str:
+    """
+    Final browser page after Toucan's POST return.
+    Never send the shopper back to an API/browser-return URL (avoids a redirect loop
+    when Success/Failure were pointed at the reclaim endpoint or the SPA POST landing).
+    """
+    base = (url or '').strip()
+    lower = base.lower()
+    if (
+        not base
+        or 'browser-return' in lower
+        or '/api/payments/toucan/' in lower
+        or '/api/v1/providers/toucan/' in lower
+    ):
+        return '/order-confirmation' if paid else '/checkout?status=failed'
+    return base
+
+
 def _location_for(txn):
     application = txn.payment_application
     paid = txn.payment_status == HubTransaction.PaymentStatus.SUCCESS
-    base = ((application.success_url if paid else application.failure_url) or '').strip() or '/order-confirmation'
+    base = _shopper_page(
+        application.success_url if paid else application.failure_url,
+        paid=paid,
+    )
     params = {'orderId': txn.application_order_id, 'invoice': txn.toucan_invoice}
     if not paid:
         params['status'] = 'cancelled'

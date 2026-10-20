@@ -8,7 +8,7 @@ module.exports = {
       name: 'lms-backend',
       cwd: path.join(root, 'backend'),
       script: path.join(root, 'backend', 'venv', 'bin', 'gunicorn'),
-      args: '--workers 3 --bind 0.0.0.0:8010 --timeout 60 config.wsgi:application',
+      args: '--workers 3 --bind 127.0.0.1:8010 --timeout 60 config.wsgi:application',
       interpreter: 'none',
       autorestart: true,
       max_restarts: 15,
@@ -19,7 +19,7 @@ module.exports = {
       cwd: path.join(root, 'frontend'),
       script: path.join(root, 'frontend', 'node_modules', 'serve', 'build', 'main.js'),
       interpreter: 'node',
-      args: ['-s', 'dist', '-l', 'tcp://127.0.0.1:3011'],
+      args: ['-s', 'dist', '-l', 'tcp://127.0.0.1:3012'],
       env: {
         NODE_ENV: 'production',
       },

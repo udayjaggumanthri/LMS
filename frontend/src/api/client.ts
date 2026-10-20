@@ -1,10 +1,14 @@
 import axios from 'axios';
 
 function resolveApiBaseUrl() {
-  if (typeof window !== 'undefined' && window.location.hostname === 'uat.prajnadharaedu.com') {
-    return `${window.location.origin}/api`;
+  if (typeof window !== 'undefined') {
+    const host = window.location.hostname;
+    const localHosts = new Set(['localhost', '127.0.0.1']);
+    if (!localHosts.has(host)) {
+      return `${window.location.origin}/api`;
+    }
   }
-  return import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
+  return import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8010/api';
 }
 
 export const API_BASE_URL = resolveApiBaseUrl();

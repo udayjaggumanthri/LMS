@@ -193,7 +193,7 @@ class ToucanPayService:
             'furl': furl,
             'name': clean_name,
             'phone': clean_phone,
-            'emaiId': clean_email,
+            'emailId': clean_email,
             'ha': ha,
         }
 
