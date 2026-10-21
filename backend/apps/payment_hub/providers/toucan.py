@@ -123,7 +123,9 @@ def start_checkout(profile, application, invoice, amount, customer):
     email = (customer.get('email') or '').strip()
     if not email or '@' not in email:
         return {'success': False, 'error': 'A valid email is required for payment.'}
-    name = (customer.get('name') or '').strip() or 'Customer'
+    name = (customer.get('name') or '').strip()
+    if not name:
+        return {'success': False, 'error': 'Customer name is required for payment.'}
     success_base = (application.success_url or '').strip()
     failure_base = (application.failure_url or '').strip()
     if not success_base or not failure_base:

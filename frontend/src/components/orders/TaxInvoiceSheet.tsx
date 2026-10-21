@@ -66,6 +66,8 @@ const TaxInvoiceDocument: React.FC<{ invoice: TaxInvoice }> = ({ invoice }) => {
           <div className="text-left">
             <div>Invoice No: {invoice.invoiceNumber}</div>
             {invoice.company.gstNumber ? <div>GST No : {invoice.company.gstNumber}</div> : null}
+            {invoice.transactionId ? <div>Txn ID : {invoice.transactionId}</div> : null}
+            {invoice.rrn ? <div>RRN : {invoice.rrn}</div> : null}
           </div>
           <div>Date: {invoice.date}</div>
         </div>
@@ -82,6 +84,9 @@ const TaxInvoiceDocument: React.FC<{ invoice: TaxInvoice }> = ({ invoice }) => {
         <div>
           <p><span className="font-semibold">Course :</span> {invoice.courseTitle || '—'}</p>
           <p className="mt-3"><span className="font-semibold">Payment method:</span> {invoice.paymentMethod}</p>
+          {invoice.orderNumber ? (
+            <p className="mt-3"><span className="font-semibold">Order :</span> {invoice.orderNumber}</p>
+          ) : null}
         </div>
       </section>
 

@@ -90,7 +90,22 @@ def tax_breakdown(total, gst_rate_percent):
     }
 
 
+INVOICE_PREFIX = 'PRA'
+
+
+def _invoice_day_key(when) -> str:
+    from django.utils import timezone as dj_tz
+
+    stamp = when or dj_tz.localtime()
+    if hasattr(stamp, 'astimezone'):
+        stamp = dj_tz.localtime(stamp)
+    if hasattr(stamp, 'date'):
+        stamp = stamp.date()
+    return stamp.strftime('%Y%m%d')
+
+
 def assign_tax_invoice_number(order: Order) -> str:
+    """PRA + YYYYMMDD + 4-digit daily sequence, e.g. PRA202610200001."""
     if order.tax_invoice_number:
         return order.tax_invoice_number
     with db_transaction.atomic():
@@ -102,12 +117,18 @@ def assign_tax_invoice_number(order: Order) -> str:
         if settings is None:
             PlatformSettings.objects.create(key='global')
             settings = PlatformSettings.objects.select_for_update().get(key='global')
-        number = int(settings.invoice_next_number or 1)
-        while Order.objects.filter(tax_invoice_number=str(number)).exists():
-            number += 1
-        locked.tax_invoice_number = str(number)
+        day_key = _invoice_day_key(locked.created_at)
+        prefix = f'{INVOICE_PREFIX}{day_key}'
+        seq = 1
+        while Order.objects.filter(tax_invoice_number=f'{prefix}{seq:04d}').exists():
+            seq += 1
+            if seq > 9999:
+                raise RuntimeError('Daily invoice sequence exhausted.')
+        number = f'{prefix}{seq:04d}'
+        locked.tax_invoice_number = number
         locked.save(update_fields=['tax_invoice_number', 'updated_at'])
-        settings.invoice_next_number = number + 1
+        # Keep legacy counter moving so admin settings stay meaningful.
+        settings.invoice_next_number = max(int(settings.invoice_next_number or 1), seq + 1)
         settings.save(update_fields=['invoice_next_number', 'updated_at'])
         order.tax_invoice_number = locked.tax_invoice_number
         return locked.tax_invoice_number
@@ -149,6 +170,15 @@ def build_tax_invoice(order: Order) -> dict:
         })
     course_title = items[0].course_title if len(items) == 1 else ', '.join(item.course_title for item in items)
     issued = order.created_at
+    pay_txn = (
+        order.transactions.filter(status='success').order_by('-id').first()
+        or order.transactions.order_by('-id').first()
+    )
+    rrn = ''
+    gateway_invoice = ''
+    if pay_txn is not None:
+        rrn = (pay_txn.rrn or pay_txn.psp_ref_no or pay_txn.txn_id or '').strip()
+        gateway_invoice = (pay_txn.invoice_number or '').strip()
     return {
         'company': {
             'legalName': settings.legal_name,
@@ -182,4 +212,12 @@ def build_tax_invoice(order: Order) -> dict:
         'roundOff': str(figures['round_off']),
         'total': str(figures['total']),
         'amountInWords': amount_in_words(figures['total']),
+        'orderNumber': getattr(order, 'order_number', '') or '',
+        'transactionId': (
+            getattr(order, 'payment_id', '')
+            or gateway_invoice
+            or getattr(order, 'order_number', '')
+            or ''
+        ),
+        'rrn': rrn,
     }

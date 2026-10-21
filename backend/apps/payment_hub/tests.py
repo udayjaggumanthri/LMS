@@ -19,7 +19,7 @@ from apps.payment_hub.models import (
     ProviderProfile,
 )
 from apps.orders.browser_return import browser_return_location
-from apps.payment_hub.services import deliver, process_callback, retry_due_deliveries
+from apps.payment_hub.services import deliver, process_callback, public_payment, retry_due_deliveries
 
 User = get_user_model()
 
@@ -117,6 +117,71 @@ class HubContractTests(TestCase):
         self.assertIn('t=11110000', posted)
         self.assertIn('surl=https%3A%2F%2Fshop-a.example%2Fpaid', posted)
         self.assertNotIn('evil.example', posted)
+        self.assertIn('name=Asha', posted)
+        self.assertIn('phone=9876543210', posted)
+        self.assertIn('emailId=asha%40example.com', posted)
+        self.assertNotIn('mpayhub', posted.lower())
+        self.assertNotIn('empire', posted.lower())
+        self.assertNotIn('partner', posted.lower())
+        ua = mock_build.return_value.open.call_args[0][0].headers.get('User-agent') or ''
+        self.assertIn('Prajnadhara-LMS', ua)
+        self.assertNotIn('mPayHub', ua)
+        txn.refresh_from_db()
+        public = public_payment(txn)
+        self.assertEqual(public['name'], 'Asha')
+        self.assertEqual(public['phone'], '9876543210')
+        self.assertEqual(public['email'], 'asha@example.com')
+        self.assertEqual(response.json().get('name'), 'Asha')
+        self.assertEqual(response.json().get('email'), 'asha@example.com')
+
+    def test_create_rejects_empty_name(self):
+        body = {
+            'application_order_id': 'order-noname',
+            'amount': '10',
+            'name': '  ',
+            'phone': '9876543210',
+            'email': 'asha@example.com',
+        }
+        raw, headers = signed_headers(self.cred_a.plaintext_api_key, self.cred_a.plaintext_hmac_secret, body)
+        response = self.client.post('/api/v1/payments', data=raw, content_type='application/json', **headers)
+        self.assertEqual(response.status_code, 400)
+        self.assertFalse(HubTransaction.objects.filter(application_order_id='order-noname').exists())
+
+    def test_create_rejects_placeholder_email(self):
+        body = {
+            'application_order_id': 'order-placeholder',
+            'amount': '10',
+            'name': 'Asha',
+            'phone': '9876543210',
+            'email': 'legacy-1@contact.placeholder',
+        }
+        raw, headers = signed_headers(self.cred_a.plaintext_api_key, self.cred_a.plaintext_hmac_secret, body)
+        response = self.client.post('/api/v1/payments', data=raw, content_type='application/json', **headers)
+        self.assertEqual(response.status_code, 400)
+        self.assertFalse(HubTransaction.objects.filter(application_order_id='order-placeholder').exists())
+
+    def test_admin_payment_search_includes_customer_fields(self):
+        HubTransaction.objects.create(
+            payment_application=self.app_a,
+            application_id=self.app_a.application_id,
+            application_order_id='order-admin-search',
+            toucan_invoice='0101202612000077777',
+            amount=Decimal('42.00'),
+            payment_status=HubTransaction.PaymentStatus.PENDING,
+            customer_name='Ravi Kumar',
+            customer_phone='9123456780',
+            customer_email='ravi@example.com',
+        )
+        by_phone = self.client.get('/api/admin/payments/', {'q': '9123456780'})
+        self.assertEqual(by_phone.status_code, 200, by_phone.content)
+        payments = by_phone.json().get('payments') or []
+        self.assertTrue(payments)
+        row = next(p for p in payments if p['invoice'] == '0101202612000077777')
+        self.assertEqual(row['customerName'], 'Ravi Kumar')
+        self.assertEqual(row['customerPhone'], '9123456780')
+        self.assertEqual(row['customerEmail'], 'ravi@example.com')
+        by_name = self.client.get('/api/admin/payments/', {'q': 'Ravi'})
+        self.assertTrue(any(p['invoice'] == '0101202612000077777' for p in by_name.json().get('payments') or []))
 
     def test_disabled_application_is_rejected(self):
         self.app_a.enabled = False

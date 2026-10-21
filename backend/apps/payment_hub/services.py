@@ -70,17 +70,23 @@ def create_payment(application, data, idempotency_key=None, extra_invoice_taken=
         if existing is not None:
             raise HubError('A payment is already opening for this order.', 409)
 
+    name = str(payload.get('name') or '').strip()
+    if not name:
+        raise HubError('Customer name is required for payment.')
+    email = str(payload.get('email') or '').strip()
+    if '@' not in email:
+        raise HubError('A valid email is required for payment.')
+    if email.lower().endswith('@contact.placeholder'):
+        raise HubError('A real customer email is required for payment.')
     customer = {
-        'name': payload.get('name') or '',
+        'name': name,
         'phone': payload.get('phone') or '',
-        'email': payload.get('email') or '',
+        'email': email,
         'application_order_id': order_id,
     }
     phone = toucan.clean_phone(customer['phone'])
     if len(phone) != 10:
         raise HubError('Enter a 10-digit mobile number.')
-    if '@' not in (customer['email'] or ''):
-        raise HubError('A valid email is required for payment.')
 
     txn = None
     for _attempt in range(5):
@@ -95,9 +101,9 @@ def create_payment(application, data, idempotency_key=None, extra_invoice_taken=
                 amount=amount,
                 currency='INR',
                 payment_status=HubTransaction.PaymentStatus.INITIATED,
-                customer_name=customer['name'],
+                customer_name=name,
                 customer_phone=phone,
-                customer_email=customer['email'],
+                customer_email=email,
                 idempotency_key=idempotency_key or None,
             )
             break
@@ -384,6 +390,9 @@ def public_payment(txn):
         'delivery_status': txn.delivery_status,
         'redirect_url': txn.redirect_url,
         'provider_reference': txn.provider_reference,
+        'name': txn.customer_name or '',
+        'phone': txn.customer_phone or '',
+        'email': txn.customer_email or '',
     }
 
 
@@ -423,6 +432,9 @@ def _result_body(txn):
         'provider_reference': txn.provider_reference,
         'internal_id': str(txn.internal_id),
         'provider_metadata': txn.provider_metadata or {},
+        'name': txn.customer_name or '',
+        'phone': txn.customer_phone or '',
+        'email': txn.customer_email or '',
     }
 
 

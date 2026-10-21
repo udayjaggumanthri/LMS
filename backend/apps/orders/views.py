@@ -121,6 +121,8 @@ class AdminPaymentSearchView(APIView):
                     | Q(application_order_id__icontains=q)
                     | Q(provider_reference__icontains=q)
                     | Q(customer_email__icontains=q)
+                    | Q(customer_name__icontains=q)
+                    | Q(customer_phone__icontains=q)
                 )
                 .select_related('payment_application')
                 .order_by('-created_at')[:50]
@@ -134,7 +136,9 @@ class AdminPaymentSearchView(APIView):
                     'applicationOrderId': txn.application_order_id,
                     'amount': str(txn.amount),
                     'paymentStatus': txn.payment_status,
-                    'customerEmail': txn.customer_email,
+                    'customerName': txn.customer_name or '',
+                    'customerPhone': txn.customer_phone or '',
+                    'customerEmail': txn.customer_email or '',
                     'createdAt': txn.created_at.strftime('%Y-%m-%d %H:%M') if txn.created_at else '',
                     'actionCode': str((txn.provider_metadata or {}).get('actionCode') or ''),
                 })

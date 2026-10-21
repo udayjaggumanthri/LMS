@@ -263,7 +263,9 @@ export const AdminOrdersRefundsPage: React.FC = () => {
                 <tr>
                   <th className="p-2 font-medium">Transaction ID</th>
                   <th className="p-2 font-medium">Application</th>
-                  <th className="p-2 font-medium">Buyer</th>
+                  <th className="p-2 font-medium">Name</th>
+                  <th className="p-2 font-medium">Phone</th>
+                  <th className="p-2 font-medium">Email</th>
                   <th className="p-2 font-medium">Amount</th>
                   <th className="p-2 font-medium">Status</th>
                   <th className="p-2 font-medium" />
@@ -274,7 +276,9 @@ export const AdminOrdersRefundsPage: React.FC = () => {
                   <tr key={payment.invoice} className="border-t border-slate-100">
                     <td className="p-2 font-mono">{payment.invoice}</td>
                     <td className="p-2">{payment.applicationId}</td>
-                    <td className="p-2">{payment.customerEmail || payment.applicationOrderId}</td>
+                    <td className="p-2">{payment.customerName || '—'}</td>
+                    <td className="p-2 font-mono">{payment.customerPhone || '—'}</td>
+                    <td className="p-2">{payment.customerEmail || payment.applicationOrderId || '—'}</td>
                     <td className="p-2">₹{payment.amount}</td>
                     <td className="p-2">{payment.paymentStatus}</td>
                     <td className="p-2 text-right">

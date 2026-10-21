@@ -7,6 +7,8 @@ export interface AdminGatewayPayment {
   applicationOrderId: string;
   amount: string;
   paymentStatus: string;
+  customerName?: string;
+  customerPhone?: string;
   customerEmail: string;
   createdAt: string;
   actionCode?: string;
@@ -141,4 +143,7 @@ export interface TaxInvoice {
   roundOff: string;
   total: string;
   amountInWords: string;
+  orderNumber?: string;
+  transactionId?: string;
+  rrn?: string;
 }
